@@ -27,10 +27,15 @@ usage(){
 cat << EOF
 This script setups up input directories, downloads files, and runs VUS - Pathogenic concordance analysis.
 Inputs:
-    -l List of individuals in cohort by UDP ID (in format UDP#### UDP#### UDP#### ...)
-    -w PATH to where the UDP cohort will be processed and where the input reads will be stored
-    -c PATH to where the UDP cohort raw read files are located
-    -t (OPTIONAL, default=false) Set to 'true' if running workflow on small HG002 chr21 test data
+    -a PATH to raw population joint-genotyped chromosome 17 VCF file in BCF format.
+    -b PATH to raw population joint-genotyped chromosome 13 VCF file in BCF format.
+    -p PATH to where programs and scripts live. Must have the following:
+        extract_brcaexchange_data.py    (from https://github.com/cmarkello/Sandbox/tree/master/brca_exchange_cooccurrence_analysis)
+        detect_vus_benign.py            (from https://github.com/cmarkello/Sandbox/tree/master/brca_exchange_cooccurrence_analysis)
+        bcftools                        (from http://www.htslib.org/download/)
+        rtg                             (from https://github.com/RealTimeGenomics/rtg-tools)
+        vcf-sort                        (from https://vcftools.github.io/perl_module.html)
+    -w PATH to where the working directory will be where data will be processed.
     
 Outputs:
 Assumptions:
@@ -39,16 +44,13 @@ EOF
 }
 
 ## Check number of arguments
-if [ $# -lt 2 ] || [[ $@ != -* ]]; then
+if [ $# -lt 4 ] || [[ $@ != -* ]]; then
     usage
     exit 1
 fi
 
-## DEFAULT PARAMETERS
-RUN_SMALL_TEST=false
-
 ## Parse through arguments
-while getopts "l:w:c:t:h" OPTION; do
+while getopts "a:b:p:w:h" OPTION; do
     case $OPTION in
         a)
             CHR17_BCF=$OPTARG
@@ -86,14 +88,17 @@ cd ${WORK_DIR}
 
 ########################################################################
 ## build the python virtualenvironment and install necessary packages ##
-
+echo "building python virtualenv"
 virtualenv ${WORK_DIR}/vcfvenv
 source ${WORK_DIR}/vcfvenv/bin/activate
 pip install requests pyvcf
 deactivate
+echo "building python virtualenv DONE"
+echo ""
 
 ##############################################
 ## download brcaexchange data to vcf format ##
+echo "downloading and formatting brcaexchange data"
 source ${WORK_DIR}/vcfvenv/bin/activate
 python ${PROGRAM_DIR}/extract_brcaexchange_data.py -o brcaexchange_variants
 deactivate
@@ -106,19 +111,23 @@ tabix -p vcf brcaexchange_variants.brca1.vus.vcf.gz
 # Create the brcaexchange brca2 pathogenic and VUS list vcf files
 bgzip brcaexchange_variants.brca2.pathogenic.vcf
 tabix -p vcf brcaexchange_variants.brca2.pathogenic.vcf.gz
-bgzip brcaexchange_variants.brca1.vus.vcf
-tabix -p vcf brcaexchange_variants.brca1.vus.vcf.gz
+bgzip brcaexchange_variants.brca2.vus.vcf
+tabix -p vcf brcaexchange_variants.brca2.vus.vcf.gz
+echo "downloading and formatting brcaexchange data DONE"
+echo ""
 
 ############################
 ## FORMAT REFERENCE INDEX ##
-
+echo "formatting reference index"
 wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/p12/hg38.p12.fa.gz .
-gzip -d hg38.p12.fa.gz > hg38.p12.fa
+gzip -df hg38.p12.fa.gz > hg38.p12.fa
 ${PROGRAM_DIR}/rtg format -o hg38.p12.fa.sdf hg38.p12.fa
+echo "formatting reference index DONE"
+echo ""
 
 #####################################
 ## FORMAT RAW SAMPLE GENOTYPE VCFS ##
-
+echo "formatting raw sample genotype vcfs"
 # Extract brca1 region (GRCh38 coordinates)
 ${PROGRAM_DIR}/bcftools filter --regions chr17:43044295-43170245 ${CHR17_BCF} > raw_sample.phased.brca1region.vcf
 bgzip raw_sample.phased.brca1region.vcf
@@ -128,10 +137,12 @@ tabix -p vcf raw_sample.phased.brca1region.vcf.gz
 ${PROGRAM_DIR}/bcftools filter --regions chr13:32310000-32400000 ${CHR13_BCF} > raw_sample.phased.brca2region.vcf
 bgzip raw_sample.phased.brca2region.vcf
 tabix -p vcf raw_sample.phased.brca2region.vcf.gz
+echo "formatting raw sample genotype vcfs DONE"
+echo ""
 
 ######################################
 ## STRATIFY VCFS BY SNPS AND INDELS ##
-
+echo "stratifying vcfs by snps and indels"
 split_vcf () {
     VCF_FILE="$1"
     OUTPUT_BASE_FILENAME="$2"
@@ -157,10 +168,12 @@ split_vcf raw_sample.phased.brca1region.vcf.gz "raw_sample.phased.brca1region" $
 
 # stratify BRCA12 sample set data
 split_vcf raw_sample.phased.brca2region.vcf.gz "raw_sample.phased.brca2region" ${PROGRAM_DIR}
+echo "stratifying vcfs by snps and indels DONE"
+echo ""
 
 ################################
 ## RUN VCF COMPARISON FILTERS ##
-
+echo "running vcf comparison filters"
 run_rtg_vcfeval () {
     BASE_VCF="$1"
     QUERY_VCF="$2"
@@ -236,10 +249,12 @@ QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca2region.indels.vcf.gz"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca2_VUS_INDELS"
 OUTPUT_FILENAME="brca2_VUS_INDELS.sorted.vcf"
 brca2_VUS_INDELS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+echo "running vcf comparison filters DONE"
+echo ""
 
 ####################################
 ## CONCATENATE SNP AND INDEL VCFS ##
-
+echo "concatenating snp and indel vcfs"
 merge_vcfs () {
     SNPS_VCF="$1"
     INDELS_VCF="$2"
@@ -264,13 +279,18 @@ brca2_PATHOGENIC_SNPS_INDELS_file="$(merge_vcfs ${brca2_PATHOGENIC_SNPS_file} ${
 
 # merge and sort matching snps and indels from brca2 vus data
 brca2_VUS_SNPS_INDELS_file="$(merge_vcfs ${brca2_VUS_SNPS_file} ${brca2_VUS_INDELS_file} "brca2_VUS_SNPS_INDELS" ${PROGRAM_DIR})"
+echo "concatenating snp and indel vcfs DONE"
+echo ""
 
 ##################################
 ## RUN THE CONCORDANCE ANALYSIS ##
+echo "running the concordance analysis"
 source ${WORK_DIR}/vcfvenv/bin/activate
 python ${PROGRAM_DIR}/detect_vus_benign.py -i ${brca1_VUS_SNPS_INDELS_file} -j ${brca1_PATHOGENIC_SNPS_INDELS_file} -o "${WORK_DIR}/brca1_coocurrence_report.txt"
 python ${PROGRAM_DIR}/detect_vus_benign.py -i ${brca2_VUS_SNPS_INDELS_file} -j ${brca2_PATHOGENIC_SNPS_INDELS_file} -o "${WORK_DIR}/brca2_coocurrence_report.txt"
 deactivate
+echo "running the concordance analysis DONE"
+echo ""
 
 exit
 
