@@ -19,8 +19,8 @@ vcf-sort                        (from https://vcftools.github.io/perl_module.htm
 To run the program simply give it the full paths to the population joint-genotyped and phased vcfs along with its requisite programs
 and working directory.
 ```
-CHR17_BCF="/path/to/chr17.phased.vcf.gz"
-CHR13_BCF="/path/to/chr13.phased.vcf.gz"
+CHR17_BCF="/path/to/chr17.phased.bcf"
+CHR13_BCF="/path/to/chr13.phased.bcf"
 PROGRAM_DIR="/path/to/programs/directory"
 WORK_DIR="/path/to/workflow/where/program/and/data/are/exicuted"
 ```
