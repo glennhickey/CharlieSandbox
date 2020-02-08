@@ -260,25 +260,25 @@ merge_vcfs () {
     INDELS_VCF="$2"
     OUTPUT_BASE_FILENAME="$3"
     PROGRAM_DIR="$4"
-    ${PROGRAM_DIR}/bcftools concat ${SNPS_VCF} ${INDELS_VCF} > ${OUTPUT_FILENAME}.vcf
-    ${PROGRAM_DIR}/vcf-sort ${OUTPUT_FILENAME}.vcf > ${OUTPUT_FILENAME}.sorted.vcf
-    bgzip ${OUTPUT_FILENAME}.sorted.vcf
-    tabix -p vcf ${OUTPUT_FILENAME}.sorted.vcf.gz
-    rm -f ${SNPS_VCF} ${INDELS_VCF} ${OUTPUT_FILENAME}.vcf
-    echo "${OUTPUT_FILENAME}.sorted.vcf.gz"
+    ${PROGRAM_DIR}/bcftools concat ${SNPS_VCF} ${INDELS_VCF} > ${OUTPUT_BASE_FILENAME}.vcf
+    ${PROGRAM_DIR}/vcf-sort ${OUTPUT_BASE_FILENAME}.vcf > ${OUTPUT_BASE_FILENAME}.sorted.vcf
+    bgzip ${OUTPUT_BASE_FILENAME}.sorted.vcf
+    tabix -p vcf ${OUTPUT_BASE_FILENAME}.sorted.vcf.gz
+    rm -f ${OUTPUT_BASE_FILENAME}.vcf
+    echo "${OUTPUT_BASE_FILENAME}.sorted.vcf.gz"
 }
 
 # merge and sort matching snps and indels from brca1 pathogenic data
-brca1_PATHOGENIC_SNPS_INDELS_file="$(merge_vcfs ${brca1_PATHOGENIC_SNPS_file} ${brca1_PATHOGENIC_INDELS_file} "brca1_PATHOGENIC_SNPS_INDELS" ${PROGRAM_DIR})"
+brca1_PATHOGENIC_SNPS_INDELS_file=$(merge_vcfs ${brca1_PATHOGENIC_SNPS_file} ${brca1_PATHOGENIC_INDELS_file} "brca1_PATHOGENIC_SNPS_INDELS" ${PROGRAM_DIR})
 
 # merge and sort matching snps and indels from brca1 vus data
-brca1_VUS_SNPS_INDELS_file="$(merge_vcfs ${brca1_VUS_SNPS_file} ${brca1_VUS_INDELS_file} "brca1_VUS_SNPS_INDELS" ${PROGRAM_DIR})"
+brca1_VUS_SNPS_INDELS_file=$(merge_vcfs ${brca1_VUS_SNPS_file} ${brca1_VUS_INDELS_file} "brca1_VUS_SNPS_INDELS" ${PROGRAM_DIR})
 
 # merge and sort matching snps and indels from brca2 pathogenic data
-brca2_PATHOGENIC_SNPS_INDELS_file="$(merge_vcfs ${brca2_PATHOGENIC_SNPS_file} ${brca2_PATHOGENIC_INDELS_file} "brca2_PATHOGENIC_SNPS_INDELS" ${PROGRAM_DIR})"
+brca2_PATHOGENIC_SNPS_INDELS_file=$(merge_vcfs ${brca2_PATHOGENIC_SNPS_file} ${brca2_PATHOGENIC_INDELS_file} "brca2_PATHOGENIC_SNPS_INDELS" ${PROGRAM_DIR})
 
 # merge and sort matching snps and indels from brca2 vus data
-brca2_VUS_SNPS_INDELS_file="$(merge_vcfs ${brca2_VUS_SNPS_file} ${brca2_VUS_INDELS_file} "brca2_VUS_SNPS_INDELS" ${PROGRAM_DIR})"
+brca2_VUS_SNPS_INDELS_file=$(merge_vcfs ${brca2_VUS_SNPS_file} ${brca2_VUS_INDELS_file} "brca2_VUS_SNPS_INDELS" ${PROGRAM_DIR})
 echo "concatenating snp and indel vcfs DONE"
 echo ""
 
