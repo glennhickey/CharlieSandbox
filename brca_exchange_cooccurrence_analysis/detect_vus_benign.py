@@ -75,20 +75,20 @@ def main(args):
     brca_trans_union_sample_set = set.union(brca_left_het_path_right_het_vus_coocourance_sample_set, brca_right_het_path_left_het_vus_coocourance_sample_set, brca_right_het_path_hom_vus_coocourance_sample_set, brca_left_het_path_hom_vus_coocourance_sample_set)
 
     ## Look at unique vus variants that coincide with concurrance sample set
-    brca_concurrent_vus_coordinates_category_8=list()
+    brca_concurrent_vus_coordinates_category_8 = list()
     for sample in brca_left_het_path_right_het_vus_coocourance_sample_set:
         brca_concurrent_vus_coordinates_category_8.append(brca_vus_right_het_sample_list[sample])
 
-    brca_concurrent_vus_coordinates_category_9=list()
+    brca_concurrent_vus_coordinates_category_9 = list()
     for sample in brca_left_het_path_hom_vus_coocourance_sample_set:
         brca_concurrent_vus_coordinates_category_9.append(brca_vus_hom_sample_list[sample])
 
-    brca_concurrent_vus_coordinates_category_10=list()
+    brca_concurrent_vus_coordinates_category_10 = list()
     for sample in brca_right_het_path_left_het_vus_coocourance_sample_set:
         brca_concurrent_vus_coordinates_category_10.append(brca_vus_left_het_sample_list[sample])
 
 
-    brca_concurrent_vus_coordinates_category_12=list()
+    brca_concurrent_vus_coordinates_category_12 = list()
     for sample in brca_right_het_path_hom_vus_coocourance_sample_set:
         brca_concurrent_vus_coordinates_category_12.append(brca_vus_hom_sample_list[sample])
 
@@ -138,7 +138,6 @@ def main(args):
         report_file.write("Total unique VUS in (Pathogenic 0|1 - VUS 1|1) set : {}\n".format(len(brca_concurrent_vus_coordinates_category_12_set)))
         report_file.write("Total unique apparent-benign VUS : {}\n".format(len(total_concurrent_vus_coordinates_set)))
         
-
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

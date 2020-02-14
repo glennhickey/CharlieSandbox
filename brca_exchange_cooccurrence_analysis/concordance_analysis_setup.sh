@@ -194,7 +194,6 @@ run_rtg_vcfeval () {
          -t ${REF_INDEX} \
          -o ${RTG_VCFEVAL_WORKDIR}/vcfeval_output
     ${PROGRAM_DIR}/vcf-sort ${RTG_VCFEVAL_WORKDIR}/vcfeval_output/tp.vcf.gz > ${OUTPUT_FILENAME}
-    echo "${OUTPUT_FILENAME}"
 }
 
 # Process brca1 pathogenic variants
@@ -203,52 +202,52 @@ QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca1region.snps.vcf.gz"
 REF_INDEX="${WORK_DIR}/hg38.p12.fa.sdf"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca1_PATHOGENIC_SNPS"
 OUTPUT_FILENAME="brca1_PATHOGENIC_SNPS.sorted.vcf"
-brca1_PATHOGENIC_SNPS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
 
 BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca1.pathogenic.indels.vcf.gz"
 QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca1region.indels.vcf.gz"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca1_PATHOGENIC_INDELS"
 OUTPUT_FILENAME="brca1_PATHOGENIC_INDELS.sorted.vcf"
-brca1_PATHOGENIC_INDELS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
 
 # Process brca1 vus variants
 BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca1.vus.snps.vcf.gz"
 QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca1region.snps.vcf.gz"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca1_VUS_SNPS"
 OUTPUT_FILENAME="brca1_VUS_SNPS.sorted.vcf"
-brca1_VUS_SNPS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
 
 BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca1.vus.indels.vcf.gz"
 QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca1region.indels.vcf.gz"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca1_VUS_INDELS"
 OUTPUT_FILENAME="brca1_VUS_INDELS.sorted.vcf"
-brca1_VUS_INDELS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
 
 # Process brca2 pathogenic variants
 BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca2.pathogenic.snps.vcf.gz"
 QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca2region.snps.vcf.gz"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca2_PATHOGENIC_SNPS"
 OUTPUT_FILENAME="brca2_PATHOGENIC_SNPS.sorted.vcf"
-brca2_PATHOGENIC_SNPS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
 
 BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca2.pathogenic.indels.vcf.gz"
 QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca2region.indels.vcf.gz"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca2_PATHOGENIC_INDELS"
 OUTPUT_FILENAME="brca2_PATHOGENIC_INDELS.sorted.vcf"
-brca2_PATHOGENIC_INDELS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
 
 # Process brca2 vus variants
 BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca2.vus.snps.vcf.gz"
 QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca2region.snps.vcf.gz"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca2_VUS_SNPS"
 OUTPUT_FILENAME="brca2_VUS_SNPS.sorted.vcf"
-brca2_VUS_SNPS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
 
 BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca2.vus.indels.vcf.gz"
 QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca2region.indels.vcf.gz"
 RTG_VCFEVAL_WORKDIR="${WORK_DIR}/brca2_VUS_INDELS"
 OUTPUT_FILENAME="brca2_VUS_INDELS.sorted.vcf"
-brca2_VUS_INDELS_file="$(run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR})"
+run_rtg_vcfeval ${BASE_VCF} ${QUERY_VCF} ${REF_INDEX} ${RTG_VCFEVAL_WORKDIR} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
 echo "running vcf comparison filters DONE"
 echo ""
 
@@ -260,6 +259,10 @@ merge_vcfs () {
     INDELS_VCF="$2"
     OUTPUT_BASE_FILENAME="$3"
     PROGRAM_DIR="$4"
+    echo "$SNPS_VCF"
+    echo "$INDELS_VCF"
+    echo "$OUTPUT_BASE_FILENAME"
+    echo "$PROGRAM_DIR"
     ${PROGRAM_DIR}/bcftools concat ${SNPS_VCF} ${INDELS_VCF} > ${OUTPUT_BASE_FILENAME}.vcf
     ${PROGRAM_DIR}/vcf-sort ${OUTPUT_BASE_FILENAME}.vcf > ${OUTPUT_BASE_FILENAME}.sorted.vcf
     bgzip ${OUTPUT_BASE_FILENAME}.sorted.vcf
@@ -269,16 +272,28 @@ merge_vcfs () {
 }
 
 # merge and sort matching snps and indels from brca1 pathogenic data
-brca1_PATHOGENIC_SNPS_INDELS_file=$(merge_vcfs ${brca1_PATHOGENIC_SNPS_file} ${brca1_PATHOGENIC_INDELS_file} "brca1_PATHOGENIC_SNPS_INDELS" ${PROGRAM_DIR})
+brca1_PATHOGENIC_SNPS_file="brca1_PATHOGENIC_SNPS.sorted.vcf"
+brca1_PATHOGENIC_INDELS_file="brca1_PATHOGENIC_INDELS.sorted.vcf"
+OUTPUT_BASE_FILENAME="brca1_PATHOGENIC_SNPS_INDELS"
+merge_vcfs ${brca1_PATHOGENIC_SNPS_file} ${brca1_PATHOGENIC_INDELS_file} ${OUTPUT_BASE_FILENAME} ${PROGRAM_DIR}
 
 # merge and sort matching snps and indels from brca1 vus data
-brca1_VUS_SNPS_INDELS_file=$(merge_vcfs ${brca1_VUS_SNPS_file} ${brca1_VUS_INDELS_file} "brca1_VUS_SNPS_INDELS" ${PROGRAM_DIR})
+brca1_VUS_SNPS_file="brca1_VUS_SNPS.sorted.vcf"
+brca1_VUS_INDELS_file="brca1_VUS_INDELS.sorted.vcf"
+OUTPUT_BASE_FILENAME="brca1_VUS_SNPS_INDELS"
+merge_vcfs ${brca1_VUS_SNPS_file} ${brca1_VUS_INDELS_file} ${OUTPUT_BASE_FILENAME} ${PROGRAM_DIR}
 
 # merge and sort matching snps and indels from brca2 pathogenic data
-brca2_PATHOGENIC_SNPS_INDELS_file=$(merge_vcfs ${brca2_PATHOGENIC_SNPS_file} ${brca2_PATHOGENIC_INDELS_file} "brca2_PATHOGENIC_SNPS_INDELS" ${PROGRAM_DIR})
+brca2_PATHOGENIC_SNPS_file="brca2_PATHOGENIC_SNPS.sorted.vcf"
+brca2_PATHOGENIC_INDELS_file="brca2_PATHOGENIC_INDELS.sorted.vcf"
+OUTPUT_BASE_FILENAME="brca2_PATHOGENIC_SNPS_INDELS"
+merge_vcfs ${brca2_PATHOGENIC_SNPS_file} ${brca2_PATHOGENIC_INDELS_file} ${OUTPUT_BASE_FILENAME} ${PROGRAM_DIR}
 
 # merge and sort matching snps and indels from brca2 vus data
-brca2_VUS_SNPS_INDELS_file=$(merge_vcfs ${brca2_VUS_SNPS_file} ${brca2_VUS_INDELS_file} "brca2_VUS_SNPS_INDELS" ${PROGRAM_DIR})
+brca2_VUS_SNPS_file="brca2_VUS_SNPS.sorted.vcf"
+brca2_VUS_INDELS_file="brca2_VUS_INDELS.sorted.vcf"
+OUTPUT_BASE_FILENAME="brca2_VUS_SNPS_INDELS"
+merge_vcfs ${brca2_VUS_SNPS_file} ${brca2_VUS_INDELS_file} ${OUTPUT_BASE_FILENAME} ${PROGRAM_DIR}
 echo "concatenating snp and indel vcfs DONE"
 echo ""
 
@@ -286,8 +301,8 @@ echo ""
 ## RUN THE CONCORDANCE ANALYSIS ##
 echo "running the concordance analysis"
 source ${WORK_DIR}/vcfvenv/bin/activate
-python ${PROGRAM_DIR}/detect_vus_benign.py -i ${brca1_VUS_SNPS_INDELS_file} -j ${brca1_PATHOGENIC_SNPS_INDELS_file} -o "${WORK_DIR}/brca1_coocurrence_report.txt"
-python ${PROGRAM_DIR}/detect_vus_benign.py -i ${brca2_VUS_SNPS_INDELS_file} -j ${brca2_PATHOGENIC_SNPS_INDELS_file} -o "${WORK_DIR}/brca2_coocurrence_report.txt"
+python ${PROGRAM_DIR}/detect_vus_benign.py -i "${WORK_DIR}/brca1_VUS_SNPS_INDELS.sorted.vcf.gz" -j "${WORK_DIR}/brca1_PATHOGENIC_SNPS_INDELS.sorted.vcf.gz" -o "${WORK_DIR}/brca1_coocurrence_report.txt"
+python ${PROGRAM_DIR}/detect_vus_benign.py -i "${WORK_DIR}/brca2_VUS_SNPS_INDELS.sorted.vcf.gz" -j "${WORK_DIR}/brca2_PATHOGENIC_SNPS_INDELS.sorted.vcf.gz" -o "${WORK_DIR}/brca2_coocurrence_report.txt"
 deactivate
 echo "running the concordance analysis DONE"
 echo ""
