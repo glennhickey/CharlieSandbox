@@ -15,6 +15,8 @@ def parse_args():
         help='Input brcaexchange-pathogenic/sample-genotype concordant vcf filepath.')
     parser.add_argument('-o', '--outReport', type=str,
         help='Output report filename.')
+    parser.add_argument('-v', '--outVariants', type=str,
+        help='Output apparent-benign VUS variants list filename.')
 
     options = parser.parse_args()
     return options
@@ -31,11 +33,11 @@ def main(args):
     for record in vcf_reader_pathogenic:
         for sample in record.samples:
             if sample['GT'] == '1|0':
-                brca_pathogenic_left_het_sample_list[sample.sample].append("{}_{}_{}".format(record.POS,record.REF,record.ALT))
+                brca_pathogenic_left_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
             elif sample['GT'] == '0|1':
-                brca_pathogenic_right_het_sample_list[sample.sample].append("{}_{}_{}".format(record.POS,record.REF,record.ALT))
+                brca_pathogenic_right_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
             elif sample['GT'] == '1|1':
-                brca_pathogenic_hom_sample_list[sample.sample].append("{}_{}_{}".format(record.POS,record.REF,record.ALT))
+                brca_pathogenic_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
     
     ## Isolate samples by the 2 different phased VUS het calls
     vcf_reader_vus = vcf.Reader(options.inVUSvcf)
@@ -45,11 +47,11 @@ def main(args):
     for record in vcf_reader_vus:
         for sample in record.samples:
             if sample['GT'] == '1|0':
-                brca_vus_left_het_sample_list[sample.sample].append("{}_{}_{}".format(record.POS,record.REF,record.ALT))
+                brca_vus_left_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
             elif sample['GT'] == '0|1':
-                brca_vus_right_het_sample_list[sample.sample].append("{}_{}_{}".format(record.POS,record.REF,record.ALT))
+                brca_vus_right_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
             elif sample['GT'] == '1|1':
-                brca_vus_hom_sample_list[sample.sample].append("{}_{}_{}".format(record.POS,record.REF,record.ALT))
+                brca_vus_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
 
     ## Look for shared samples between cis het VUS and PATHOGENIC variants
     brca_pathogenic_left_het_sample_set = set(brca_pathogenic_left_het_sample_list.keys())
@@ -138,7 +140,22 @@ def main(args):
         report_file.write("Total unique VUS in (Pathogenic 0|1 - VUS 1|1) set : {}\n".format(len(brca_concurrent_vus_coordinates_category_12_set)))
         report_file.write("Total unique apparent-benign VUS : {}\n".format(len(total_concurrent_vus_coordinates_set)))
         
-
+    ## Output apparent-benign VUS variants list
+    with open(options.outVariants, 'w') as vcf_file:
+        vcf_file.write("##fileformat=VCFv4.2\n")
+        if 'chr13' in record.CHROM:
+            vcf_file.write("##contig=<ID=chr13,length=114364328>\n")
+        elif 'chr17' in record.CHROM:
+            vcf_file.write("##contig=<ID=chr17,length=83257441>\n")
+        vcf_file.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+        for variant in total_concurrent_vus_coordinates_set:
+            variant_elements = variant.split('_')
+            chromosome_element = variant_elements[0]
+            position_element = variant_elements[1]
+            ref_allele_element = variant_elements[2]
+            alt_allele_element = variant_elements[3].strip('][').split(', ')[0]
+            vcf_file.write("{}\t{}\t.\t{}\t{}\t.\t.\t.\n".format(chromosome_element,position_element,ref_allele_element,alt_allele_element))
+    
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
 
