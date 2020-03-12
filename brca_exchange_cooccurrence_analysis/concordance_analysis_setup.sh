@@ -89,7 +89,7 @@ cd ${WORK_DIR}
 echo "building python virtualenv"
 virtualenv ${WORK_DIR}/vcfvenv
 source ${WORK_DIR}/vcfvenv/bin/activate
-pip install requests pyvcf
+pip install requests pyvcf hgvs pyhgvs pyfaidx
 deactivate
 echo "building python virtualenv DONE"
 echo ""
@@ -117,9 +117,14 @@ echo ""
 ############################
 ## FORMAT REFERENCE INDEX ##
 echo "formatting reference index"
-wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/p12/hg38.p12.fa.gz .
+wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/p12/hg38.p12.fa.gz
+wget http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/ncbiRefSeq.txt.gz
 gzip -df hg38.p12.fa.gz > hg38.p12.fa
-${PROGRAM_DIR}/rtg format -o hg38.p12.fa.sdf hg38.p12.fa
+gzip -df ncbiRefSeq.txt.gz > ncbiRefSeq.txt
+source ${WORK_DIR}/vcfvenv/bin/activate
+faidx --no-output hg38.p12.fa
+deactivate
+#${PROGRAM_DIR}/rtg format -o hg38.p12.fa.sdf hg38.p12.fa
 echo "formatting reference index DONE"
 echo ""
 
@@ -140,17 +145,53 @@ echo ""
 
 ################################
 ## RUN VCF COMPARISON FILTERS ##
-echo "running vcf comparison filters"
+echo "running vcf normalization and comparison filters"
 run_vcf_comparison () {
     BASE_VCF="$1"
     QUERY_VCF="$2"
     OUTPUT_FILENAME="$3"
     PROGRAM_DIR="$4"
+    echo "Normalizing ${BASE_VCF}"
+    ${PROGRAM_DIR}/hgvs_normalize.py \
+        -i ${BASE_VCF} \
+        -o ${OUTPUT_FILENAME}.base_vcf.norm.vcf \
+        -r hg38.p12.fa \
+        -g ncbiRefSeq.txt
+    #${PROGRAM_DIR}/vt normalize \
+    #    ${BASE_VCF} \
+    #    -r hg38.p12.fa \
+    #    -o ${OUTPUT_FILENAME}.base_vcf.norm.vcf
+    #${PROGRAM_DIR}/bcftools norm \
+    #    -f hg38.p12.fa \
+    #    --threads 8 \
+    #    -m-both -c w\
+    #    -o ${OUTPUT_FILENAME}.base_vcf.norm.vcf \
+    #    ${BASE_VCF}
+    bgzip ${OUTPUT_FILENAME}.base_vcf.norm.vcf
+    tabix -p vcf ${OUTPUT_FILENAME}.base_vcf.norm.vcf.gz
+    echo "Normalizing ${QUERY_VCF}"
+    ${PROGRAM_DIR}/hgvs_normalize.py \
+        -i ${QUERY_VCF} \
+        -o ${OUTPUT_FILENAME}.query_vcf.norm.vcf \
+        -r hg38.p12.fa \
+        -g ncbiRefSeq.txt
+    #${PROGRAM_DIR}/vt normalize \
+    #    ${QUERY_VCF} \
+    #    -r hg38.p12.fa \
+    #    -o ${OUTPUT_FILENAME}.query_vcf.norm.vcf
+    #${PROGRAM_DIR}/bcftools norm \
+    #    -f hg38.p12.fa \
+    #    --threads 8 \
+    #    -m-both -c w\
+    #    -o ${OUTPUT_FILENAME}.query_vcf.norm.vcf \
+    #    ${QUERY_VCF}
+    bgzip ${OUTPUT_FILENAME}.query_vcf.norm.vcf
+    tabix -p vcf ${OUTPUT_FILENAME}.query_vcf.norm.vcf.gz
     ${PROGRAM_DIR}/bcftools isec \
         -O v \
         -n =2 -w 1 \
-        ${QUERY_VCF} \
-        ${BASE_VCF} \
+        ${OUTPUT_FILENAME}.query_vcf.norm.vcf.gz \
+        ${OUTPUT_FILENAME}.base_vcf.norm.vcf.gz \
         > ${OUTPUT_FILENAME}.vcf
     ${PROGRAM_DIR}/vcf-sort ${OUTPUT_FILENAME}.vcf > ${OUTPUT_FILENAME}.sorted.vcf
     bgzip ${OUTPUT_FILENAME}.sorted.vcf
