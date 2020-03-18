@@ -9,9 +9,9 @@ def parse_args():
         is not listed in the command, else the option value is set to True.
     """
     parser = argparse.ArgumentParser('Input both a VUS and pathogenic concordant bgzip compressed and tabix indexed vcf.')
-    parser.add_argument('-i', '--inVUSvcf', type=argparse.FileType('r'),
+    parser.add_argument('-i', '--inVUSvcf', type=argparse.FileType('rb'),
         help='Input brcaexchange-VUS/sample-genotype concordant vcf filepath.')
-    parser.add_argument('-j', '--inPATHvcf', type=argparse.FileType('r'),
+    parser.add_argument('-j', '--inPATHvcf', type=argparse.FileType('rb'),
         help='Input brcaexchange-pathogenic/sample-genotype concordant vcf filepath.')
     parser.add_argument('-o', '--outReport', type=str,
         help='Output report filename.')

@@ -26,8 +26,6 @@ usage(){
 cat << EOF
 This script setups up input directories, downloads files, and runs VUS - Pathogenic concordance analysis.
 Inputs:
-    -a PATH to raw population joint-genotyped chromosome 17 VCF file in BCF format.
-    -b PATH to raw population joint-genotyped chromosome 13 VCF file in BCF format.
     -p PATH to where programs and scripts live. Must have the following:
         extract_brcaexchange_data.py    (from https://github.com/cmarkello/Sandbox/tree/master/brca_exchange_cooccurrence_analysis)
         detect_vus_benign.py            (from https://github.com/cmarkello/Sandbox/tree/master/brca_exchange_cooccurrence_analysis)
@@ -42,20 +40,14 @@ EOF
 }
 
 ## Check number of arguments
-if [ $# -lt 4 ] || [[ $@ != -* ]]; then
+if [ $# -lt 2 ] || [[ $@ != -* ]]; then
     usage
     exit 1
 fi
 
 ## Parse through arguments
-while getopts "a:b:p:w:h" OPTION; do
+while getopts "p:w:h" OPTION; do
     case $OPTION in
-        a)
-            CHR17_BCF=$OPTARG
-        ;;
-        b)
-            CHR13_BCF=$OPTARG
-        ;;
         p)
             PROGRAM_DIR=$OPTARG
         ;;
@@ -87,19 +79,45 @@ cd ${WORK_DIR}
 ########################################################################
 ## build the python virtualenvironment and install necessary packages ##
 echo "building python virtualenv"
-virtualenv ${WORK_DIR}/vcfvenv
-source ${WORK_DIR}/vcfvenv/bin/activate
-pip install requests pyvcf hgvs pyhgvs pyfaidx
-deactivate
+
+# Install a new version of sqlite3 (for seqrepo compatibility)
+cd ${WORK_DIR}
+wget https://www.sqlite.org/2020/sqlite-autoconf-3310100.tar.gz
+tar xvfz sqlite-autoconf-3310100.tar.gz
+cd sqlite-autoconf-3310100
+mkdir -p ${WORK_DIR}/lib
+mkdir -p ${WORK_DIR}/bin
+./configure --prefix=${WORK_DIR}
+make
+make install
+
+# Install a new version of python3
+cd ${WORK_DIR}
+wget https://www.python.org/ftp/python/3.8.2/Python-3.8.2.tgz
+tar xvfz Python-3.8.2.tgz
+cd Python-3.8.2
+LD_RUN_PATH=${WORK_DIR}/lib ./configure --enable-loadable-sqlite-extensions --prefix=${WORK_DIR} --with-pydebug
+perl -pi.orig -e "s|(?<=sqlite_inc_paths = )\[|['${WORK_DIR}/include',\n|" setup.py
+LD_RUN_PATH=${WORK_DIR}/lib make
+LD_RUN_PATH=${WORK_DIR}/lib make altinstall
+
+cd ${WORK_DIR}
+${WORK_DIR}/bin/python3.8 -m venv ${PROGRAM_DIR}/vcfvenv3.8
+source ${PROGRAM_DIR}/vcfvenv3.8/bin/activate
+python3.8 -m pip install --upgrade pip
+python3.8 -m pip install cython
+python3.8 -m pip install IPython==5.0
+python3.8 -m pip install hgvs
+python3.8 -m pip install requests pyvcf hgvs pyhgvs pyfaidx
+python3.8 -m pip install biocommons.seqrepo
 echo "building python virtualenv DONE"
 echo ""
 
 ##############################################
 ## download brcaexchange data to vcf format ##
 echo "downloading and formatting brcaexchange data"
-source ${WORK_DIR}/vcfvenv/bin/activate
-python ${PROGRAM_DIR}/extract_brcaexchange_data.py -o brcaexchange_variants
-deactivate
+cd ${WORK_DIR}
+python3.8 ${PROGRAM_DIR}/extract_brcaexchange_data.py -o brcaexchange_variants
 # Create the brcaexchange brca1 pathogenic and VUS list vcf files
 bgzip brcaexchange_variants.brca1.pathogenic.vcf
 tabix -p vcf brcaexchange_variants.brca1.pathogenic.vcf.gz
@@ -121,129 +139,15 @@ wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/p12/hg38.p12.fa.gz
 wget http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/ncbiRefSeq.txt.gz
 gzip -df hg38.p12.fa.gz > hg38.p12.fa
 gzip -df ncbiRefSeq.txt.gz > ncbiRefSeq.txt
-source ${WORK_DIR}/vcfvenv/bin/activate
 faidx --no-output hg38.p12.fa
-deactivate
-#${PROGRAM_DIR}/rtg format -o hg38.p12.fa.sdf hg38.p12.fa
+if [ $(docker container ps --filter name="uta_20170117" | wc -l) == 1 ]; then
+    docker run -d --name uta_20170117 -p 15032:5432 biocommons/uta:uta_20170117
+fi
+mkdir ${WORK_DIR}/seqrepo
+seqrepo -r ${WORK_DIR}/seqrepo pull -i 2019-06-20
 echo "formatting reference index DONE"
 echo ""
-
-#####################################
-## FORMAT RAW SAMPLE GENOTYPE VCFS ##
-echo "formatting raw sample genotype vcfs"
-# Extract brca1 region (GRCh38 coordinates)
-${PROGRAM_DIR}/bcftools filter --regions chr17:43044295-43170245 ${CHR17_BCF} > raw_sample.phased.brca1region.vcf
-bgzip raw_sample.phased.brca1region.vcf
-tabix -p vcf raw_sample.phased.brca1region.vcf.gz
-
-# Extract brca2 region (GRCh38 coordinates)
-${PROGRAM_DIR}/bcftools filter --regions chr13:32310000-32400000 ${CHR13_BCF} > raw_sample.phased.brca2region.vcf
-bgzip raw_sample.phased.brca2region.vcf
-tabix -p vcf raw_sample.phased.brca2region.vcf.gz
-echo "formatting raw sample genotype vcfs DONE"
-echo ""
-
-################################
-## RUN VCF COMPARISON FILTERS ##
-echo "running vcf normalization and comparison filters"
-run_vcf_comparison () {
-    BASE_VCF="$1"
-    QUERY_VCF="$2"
-    OUTPUT_FILENAME="$3"
-    PROGRAM_DIR="$4"
-    echo "Normalizing ${BASE_VCF}"
-    ${PROGRAM_DIR}/hgvs_normalize.py \
-        -i ${BASE_VCF} \
-        -o ${OUTPUT_FILENAME}.base_vcf.norm.vcf \
-        -r hg38.p12.fa \
-        -g ncbiRefSeq.txt
-    #${PROGRAM_DIR}/vt normalize \
-    #    ${BASE_VCF} \
-    #    -r hg38.p12.fa \
-    #    -o ${OUTPUT_FILENAME}.base_vcf.norm.vcf
-    #${PROGRAM_DIR}/bcftools norm \
-    #    -f hg38.p12.fa \
-    #    --threads 8 \
-    #    -m-both -c w\
-    #    -o ${OUTPUT_FILENAME}.base_vcf.norm.vcf \
-    #    ${BASE_VCF}
-    bgzip ${OUTPUT_FILENAME}.base_vcf.norm.vcf
-    tabix -p vcf ${OUTPUT_FILENAME}.base_vcf.norm.vcf.gz
-    echo "Normalizing ${QUERY_VCF}"
-    ${PROGRAM_DIR}/hgvs_normalize.py \
-        -i ${QUERY_VCF} \
-        -o ${OUTPUT_FILENAME}.query_vcf.norm.vcf \
-        -r hg38.p12.fa \
-        -g ncbiRefSeq.txt
-    #${PROGRAM_DIR}/vt normalize \
-    #    ${QUERY_VCF} \
-    #    -r hg38.p12.fa \
-    #    -o ${OUTPUT_FILENAME}.query_vcf.norm.vcf
-    #${PROGRAM_DIR}/bcftools norm \
-    #    -f hg38.p12.fa \
-    #    --threads 8 \
-    #    -m-both -c w\
-    #    -o ${OUTPUT_FILENAME}.query_vcf.norm.vcf \
-    #    ${QUERY_VCF}
-    bgzip ${OUTPUT_FILENAME}.query_vcf.norm.vcf
-    tabix -p vcf ${OUTPUT_FILENAME}.query_vcf.norm.vcf.gz
-    ${PROGRAM_DIR}/bcftools isec \
-        -O v \
-        -n =2 -w 1 \
-        ${OUTPUT_FILENAME}.query_vcf.norm.vcf.gz \
-        ${OUTPUT_FILENAME}.base_vcf.norm.vcf.gz \
-        > ${OUTPUT_FILENAME}.vcf
-    ${PROGRAM_DIR}/vcf-sort ${OUTPUT_FILENAME}.vcf > ${OUTPUT_FILENAME}.sorted.vcf
-    bgzip ${OUTPUT_FILENAME}.sorted.vcf
-    tabix -p vcf ${OUTPUT_FILENAME}.sorted.vcf.gz
-    rm ${OUTPUT_FILENAME}.vcf
-}
-
-# Process brca1 pathogenic variants
-BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca1.pathogenic.vcf.gz"
-QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca1region.vcf.gz"
-OUTPUT_FILENAME="brca1_PATHOGENIC"
-run_vcf_comparison ${BASE_VCF} ${QUERY_VCF} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
-
-
-# Process brca1 vus variants
-BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca1.vus.vcf.gz"
-QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca1region.vcf.gz"
-OUTPUT_FILENAME="brca1_VUS"
-run_vcf_comparison ${BASE_VCF} ${QUERY_VCF} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
-
-
-# Process brca2 pathogenic variants
-BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca2.pathogenic.vcf.gz"
-QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca2region.vcf.gz"
-OUTPUT_FILENAME="brca2_PATHOGENIC"
-run_vcf_comparison ${BASE_VCF} ${QUERY_VCF} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
-
-# Process brca2 vus variants
-BASE_VCF="${WORK_DIR}/brcaexchange_variants.brca2.vus.vcf.gz"
-QUERY_VCF="${WORK_DIR}/raw_sample.phased.brca2region.vcf.gz"
-OUTPUT_FILENAME="brca2_VUS"
-run_vcf_comparison ${BASE_VCF} ${QUERY_VCF} ${OUTPUT_FILENAME} ${PROGRAM_DIR}
-echo "running vcf comparison filters DONE"
-echo ""
-
-##################################
-## RUN THE CONCORDANCE ANALYSIS ##
-echo "running the concordance analysis"
-source ${WORK_DIR}/vcfvenv/bin/activate
-python ${PROGRAM_DIR}/detect_vus_benign.py -i "${WORK_DIR}/brca1_VUS.sorted.vcf.gz" -j "${WORK_DIR}/brca1_PATHOGENIC.sorted.vcf.gz" -o "${WORK_DIR}/brca1_coocurrence_report.txt" -v "${WORK_DIR}/brca1_apparent_benign_VUS.vcf"
-python ${PROGRAM_DIR}/detect_vus_benign.py -i "${WORK_DIR}/brca2_VUS.sorted.vcf.gz" -j "${WORK_DIR}/brca2_PATHOGENIC.sorted.vcf.gz" -o "${WORK_DIR}/brca2_coocurrence_report.txt" -v "${WORK_DIR}/brca2_apparent_benign_VUS.vcf"
 deactivate
-${PROGRAM_DIR}/vcf-sort ${WORK_DIR}/brca1_apparent_benign_VUS.vcf > ${WORK_DIR}/brca1_apparent_benign_VUS.sorted.vcf
-bgzip ${WORK_DIR}/brca1_apparent_benign_VUS.sorted.vcf
-tabix -p vcf ${WORK_DIR}/brca1_apparent_benign_VUS.sorted.vcf.gz
-rm ${WORK_DIR}/brca1_apparent_benign_VUS.vcf
-${PROGRAM_DIR}/vcf-sort ${WORK_DIR}/brca2_apparent_benign_VUS.vcf > ${WORK_DIR}/brca2_apparent_benign_VUS.sorted.vcf
-bgzip ${WORK_DIR}/brca2_apparent_benign_VUS.sorted.vcf
-tabix -p vcf ${WORK_DIR}/brca2_apparent_benign_VUS.sorted.vcf.gz
-rm ${WORK_DIR}/brca2_apparent_benign_VUS.vcf
-echo "running the concordance analysis DONE"
-echo ""
 
 exit
 
