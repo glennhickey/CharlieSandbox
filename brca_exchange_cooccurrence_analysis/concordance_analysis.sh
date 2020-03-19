@@ -115,112 +115,6 @@ run_vcf_comparison () {
     QUERY_VCF="$2"
     OUTPUT_FILENAME="$3"
     PROGRAM_DIR="$4"
-    #python3.8 ${PROGRAM_DIR}/hgvs_normalize.py \
-    #    -i ${BASE_VCF} \
-    #    -o ${OUTPUT_FILENAME}.base_vcf.norm.vcf \
-    #    -r hg38.p12.fa \
-    #    -g ncbiRefSeq.txt
-    #${PROGRAM_DIR}/vcf-sort -p 8 ${OUTPUT_FILENAME}.base_vcf.norm.vcf > ${OUTPUT_FILENAME}.base_vcf.norm.sorted.vcf
-    #bgzip ${OUTPUT_FILENAME}.base_vcf.norm.sorted.vcf
-    #tabix -p vcf ${OUTPUT_FILENAME}.base_vcf.norm.sorted.vcf.gz
-    #rm -f ${OUTPUT_FILENAME}.base_vcf.norm.vcf
-    
-    ## Split VCFs into chunks and process each chunk in parallel
-    #INPUT_VCF=${BASE_VCF}
-    #BASENAME_VCF=$(basename "$INPUT_VCF")
-    #VCF_FILENAME=${BASENAME_VCF%.vcf.gz}
-    #NUM_CHUNKS=8
-    #zcat ${INPUT_VCF} | tee >(head -n 10000 - | grep "^#" >${VCF_FILENAME}.header) | grep -v "^#" - >${VCF_FILENAME}.variants
-    ##split into ${NUM_CHUNKS} chunks
-    #split -d -n l/${NUM_CHUNKS} ${VCF_FILENAME}.variants ${VCF_FILENAME}
-    ##reattach the header to each and clean up
-    #for i in ${VCF_FILENAME}[0-9][0-9];do cat ${VCF_FILENAME}.header $i >$i.vcf && rm -f $i;done
-    #rm -f ${VCF_FILENAME}.header ${VCF_FILENAME}.variants
-    #normalize_base_vcf_pids=()
-    #for i in ${NUM_CHUNKS}; do
-    #    file_index=$((${i}-1))
-    #    python3.8 ${PROGRAM_DIR}/hgvs_normalize.py \
-    #        -i "${VCF_FILENAME}0${file_index}.vcf" \
-    #        -o "${OUTPUT_FILENAME}.base_vcf.norm.${file_index}.vcf" \
-    #        -r hg38.p12.fa \
-    #        -g ncbiRefSeq.txt &
-    #    normalize_base_vcf_pids[${i}]=$!
-    #done
-    #for pid in ${normalize_base_vcf_pids[*]}; do
-    #    wait $pid
-    #done
-    #sorted_base_vcfs=()
-    #for i in ${NUM_CHUNKS}; do
-    #    file_index=$((${i}-1))
-    #    ${PROGRAM_DIR}/vcf-sort \
-    #        ${OUTPUT_FILENAME}.base_vcf.norm.${file_index}.vcf \
-    #        > ${OUTPUT_FILENAME}.base_vcf.norm.sorted.${file_index}.vcf && rm -f ${OUTPUT_FILENAME}.base_vcf.norm.${file_index}.vcf
-    #    sorted_base_vcfs+=(${OUTPUT_FILENAME}.base_vcf.norm.sorted.${file_index}.vcf)
-    #done
-    #${PROGRAM_DIR}/bcftools concat -O b ${sorted_base_vcfs[@]} -o ${OUTPUT_FILENAME}.base_vcf.norm.vcf.gz
-    #tabix -p vcf ${OUTPUT_FILENAME}.base_vcf.norm.vcf.gz
-    #rm ${sorted_base_vcfs[@]}
-    
-    #echo "Normalizing ${QUERY_VCF}"
-    #if [ ! -f "${WORK_DIR}/${OUTPUT_FILENAME}.sorted.vcf.gz" ]; then
-    #    # Separate vcf variant data from genotype data
-    #    ${PROGRAM_DIR}/bcftools view -G ${QUERY_VCF} -O v -o ${OUTPUT_FILENAME}.query_vcf.no_genotypes.vcf
-    #    ${PROGRAM_DIR}/bcftools query -f '[\t%GT]\n' ${QUERY_VCF} > ${OUTPUT_FILENAME}.query_vcf.genotypes.vcf
-    #    bgzip ${OUTPUT_FILENAME}.query_vcf.no_genotypes.vcf
-    #    tabix -p vcf ${OUTPUT_FILENAME}.query_vcf.no_genotypes.vcf.gz
-    #    # Normalize only the variant data
-    #    python3.8 ${PROGRAM_DIR}/hgvs_normalize.py \
-    #        -i ${OUTPUT_FILENAME}.query_vcf.no_genotypes.vcf.gz \
-    #        -o ${OUTPUT_FILENAME}.query_vcf.norm.no_genotypes.vcf \
-    #        -r hg38.p12.fa \
-    #        -g ncbiRefSeq.txt
-    #    
-    #    # Merge normalized variant data with genotype data
-    #    ${PROGRAM_DIR}/bcftools view -H ${OUTPUT_FILENAME}.query_vcf.norm.no_genotypes.vcf > ${OUTPUT_FILENAME}.query_vcf.norm.no_genotypes.no_header.vcf
-    #    paste ${OUTPUT_FILENAME}.query_vcf.norm.no_genotypes.no_header.vcf ${OUTPUT_FILENAME}.query_vcf.genotypes.vcf > ${OUTPUT_FILENAME}.query_vcf.norm.paste.vcf
-    #    ${PROGRAM_DIR}/bcftools view -h ${OUTPUT_FILENAME}.query_vcf.norm.no_genotypes.vcf >> ${OUTPUT_FILENAME}.query_vcf.norm.vcf
-    #    cat ${OUTPUT_FILENAME}.query_vcf.norm.paste.vcf >> ${OUTPUT_FILENAME}.query_vcf.norm.vcf
-    #    ${PROGRAM_DIR}/vcf-sort -p 8 ${OUTPUT_FILENAME}.query_vcf.norm.vcf > ${OUTPUT_FILENAME}.query_vcf.norm.sorted.vcf
-    #    bgzip ${OUTPUT_FILENAME}.query_vcf.norm.sorted.vcf
-    #    tabix -p vcf ${OUTPUT_FILENAME}.query_vcf.norm.sorted.vcf.gz
-    #    # Cleanup intermediate files
-    #    rm -f  ${OUTPUT_FILENAME}.query_vcf.norm.vcf ${OUTPUT_FILENAME}.query_vcf.norm.paste.vcf ${OUTPUT_FILENAME}.query_vcf.norm.no_genotypes.vcf ${OUTPUT_FILENAME}.query_vcf.norm.no_genotypes.no_header.vcf ${OUTPUT_FILENAME}.query_vcf.genotypes.vcf ${OUTPUT_FILENAME}.query_vcf.no_genotypes.vcf.gz ${OUTPUT_FILENAME}.query_vcf.no_genotypes.vcf.gz.tbi
-    #fi
-    #INPUT_VCF=${QUERY_VCF}
-    #BASENAME_VCF=$(basename "$INPUT_VCF")
-    #VCF_FILENAME=${BASENAME_VCF%.vcf.gz}
-    #NUM_CHUNKS=8
-    #zcat ${INPUT_VCF} | tee >(head -n 10000 - | grep "^#" >${VCF_FILENAME}.header) | grep -v "^#" - >${VCF_FILENAME}.variants
-    ##split into ${NUM_CHUNKS} chunks
-    #split -d -n l/${NUM_CHUNKS} ${VCF_FILENAME}.variants ${VCF_FILENAME}
-    ##reattach the header to each and clean up
-    #for i in ${VCF_FILENAME}[0-9][0-9];do cat ${VCF_FILENAME}.header $i >$i.vcf && rm -f $i;done
-    #rm -f ${VCF_FILENAME}.header ${VCF_FILENAME}.variants
-    #normalize_query_vcf_pids=()
-    #for i in ${NUM_CHUNKS}; do
-    #    file_index=$((${i}-1))
-    #    python3.8 ${PROGRAM_DIR}/hgvs_normalize.py \
-    #        -i "${VCF_FILENAME}0${file_index}.vcf" \
-    #        -o "${OUTPUT_FILENAME}.query_vcf.norm.${file_index}.vcf" \
-    #        -r hg38.p12.fa \
-    #        -g ncbiRefSeq.txt &
-    #    normalize_query_vcf_pids[${i}]=$!
-    #done
-    #for pid in ${normalize_query_vcf_pids[*]}; do
-    #    wait $pid
-    #done
-    #sorted_query_vcfs=()
-    #for i in ${NUM_CHUNKS}; do
-    #    file_index=$((${i}-1))
-    #    ${PROGRAM_DIR}/vcf-sort \
-    #        ${OUTPUT_FILENAME}.query_vcf.norm.${file_index}.vcf \
-    #        > ${OUTPUT_FILENAME}.query_vcf.norm.sorted.${file_index}.vcf && rm -f ${OUTPUT_FILENAME}.query_vcf.norm.${file_index}.vcf
-    #    sorted_query_vcfs+=(${OUTPUT_FILENAME}.query_vcf.norm.sorted.${file_index}.vcf)
-    #done
-    #${PROGRAM_DIR}/bcftools concat -O b ${sorted_query_vcfs[@]} -o ${OUTPUT_FILENAME}.query_vcf.norm.vcf.gz
-    #tabix -p vcf ${OUTPUT_FILENAME}.query_vcf.norm.vcf.gz
-    #rm ${sorted_query_vcfs[@]}
-    
     ${PROGRAM_DIR}/bcftools isec \
         -O v \
         -n =2 -w 1 \
@@ -252,7 +146,7 @@ run_normalize_vcf () {
     else
         # Separate vcf variant data from genotype data
         ${PROGRAM_DIR}/bcftools view -G ${INPUT_VCF} -O v -o ${OUTPUT_FILENAME}.no_genotypes.vcf
-        ${PROGRAM_DIR}/bcftools query -f '[\t%GT]\n' ${INPUT_VCF} > ${OUTPUT_FILENAME}.genotypes.vcf
+        ${PROGRAM_DIR}/bcftools query -f 'GT\t[%GT\t]\n' ${INPUT_VCF} > ${OUTPUT_FILENAME}.genotypes.vcf
         bgzip ${OUTPUT_FILENAME}.no_genotypes.vcf
         tabix -p vcf ${OUTPUT_FILENAME}.no_genotypes.vcf.gz
         # Normalize only the variant data
@@ -261,11 +155,10 @@ run_normalize_vcf () {
             -o ${OUTPUT_FILENAME}.norm.no_genotypes.vcf \
             -r hg38.p12.fa \
             -g ncbiRefSeq.txt
-        
         # Merge normalized variant data with genotype data
         ${PROGRAM_DIR}/bcftools view -H ${OUTPUT_FILENAME}.norm.no_genotypes.vcf > ${OUTPUT_FILENAME}.norm.no_genotypes.no_header.vcf
         paste ${OUTPUT_FILENAME}.norm.no_genotypes.no_header.vcf ${OUTPUT_FILENAME}.genotypes.vcf > ${OUTPUT_FILENAME}.norm.paste.vcf
-        ${PROGRAM_DIR}/bcftools view -h ${OUTPUT_FILENAME}.norm.no_genotypes.vcf >> ${OUTPUT_FILENAME}.norm.vcf
+        ${PROGRAM_DIR}/bcftools view -h ${INPUT_VCF} >> ${OUTPUT_FILENAME}.norm.vcf
         cat ${OUTPUT_FILENAME}.norm.paste.vcf >> ${OUTPUT_FILENAME}.norm.vcf
         ${PROGRAM_DIR}/vcf-sort -p 8 ${OUTPUT_FILENAME}.norm.vcf > ${OUTPUT_FILENAME}.norm.sorted.vcf
         bgzip ${OUTPUT_FILENAME}.norm.sorted.vcf

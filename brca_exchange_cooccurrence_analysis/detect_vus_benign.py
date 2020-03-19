@@ -9,9 +9,9 @@ def parse_args():
         is not listed in the command, else the option value is set to True.
     """
     parser = argparse.ArgumentParser('Input both a VUS and pathogenic concordant bgzip compressed and tabix indexed vcf.')
-    parser.add_argument('-i', '--inVUSvcf', type=argparse.FileType('rb'),
+    parser.add_argument('-i', '--inVUSvcf', type=str,
         help='Input brcaexchange-VUS/sample-genotype concordant vcf filepath.')
-    parser.add_argument('-j', '--inPATHvcf', type=argparse.FileType('rb'),
+    parser.add_argument('-j', '--inPATHvcf', type=str,
         help='Input brcaexchange-pathogenic/sample-genotype concordant vcf filepath.')
     parser.add_argument('-o', '--outReport', type=str,
         help='Output report filename.')
@@ -26,32 +26,34 @@ def main(args):
     options = parse_args()
 
     ## Isolate samples by the 2 different phased PATHOGENIC het calls
-    vcf_reader_pathogenic = vcf.Reader(options.inPATHvcf)
-    brca_pathogenic_left_het_sample_list = defaultdict(list)
-    brca_pathogenic_right_het_sample_list = defaultdict(list)
-    brca_pathogenic_hom_sample_list = defaultdict(list)
-    for record in vcf_reader_pathogenic:
-        for sample in record.samples:
-            if sample['GT'] == '1|0':
-                brca_pathogenic_left_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
-            elif sample['GT'] == '0|1':
-                brca_pathogenic_right_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
-            elif sample['GT'] == '1|1':
-                brca_pathogenic_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+    with open(options.inPATHvcf, 'rb') as inPATHvcf_file:
+        vcf_reader_pathogenic = vcf.Reader(inPATHvcf_file)
+        brca_pathogenic_left_het_sample_list = defaultdict(list)
+        brca_pathogenic_right_het_sample_list = defaultdict(list)
+        brca_pathogenic_hom_sample_list = defaultdict(list)
+        for record in vcf_reader_pathogenic:
+            for sample in record.samples:
+                if sample['GT'] == '1|0':
+                    brca_pathogenic_left_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                elif sample['GT'] == '0|1':
+                    brca_pathogenic_right_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                elif sample['GT'] == '1|1':
+                    brca_pathogenic_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
     
     ## Isolate samples by the 2 different phased VUS het calls
-    vcf_reader_vus = vcf.Reader(options.inVUSvcf)
-    brca_vus_left_het_sample_list = defaultdict(list)
-    brca_vus_right_het_sample_list = defaultdict(list)
-    brca_vus_hom_sample_list = defaultdict(list)
-    for record in vcf_reader_vus:
-        for sample in record.samples:
-            if sample['GT'] == '1|0':
-                brca_vus_left_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
-            elif sample['GT'] == '0|1':
-                brca_vus_right_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
-            elif sample['GT'] == '1|1':
-                brca_vus_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+    with open(options.inVUSvcf, 'rb') as inVUSvcf_file:
+        vcf_reader_vus = vcf.Reader(inVUSvcf_file)
+        brca_vus_left_het_sample_list = defaultdict(list)
+        brca_vus_right_het_sample_list = defaultdict(list)
+        brca_vus_hom_sample_list = defaultdict(list)
+        for record in vcf_reader_vus:
+            for sample in record.samples:
+                if sample['GT'] == '1|0':
+                    brca_vus_left_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                elif sample['GT'] == '0|1':
+                    brca_vus_right_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                elif sample['GT'] == '1|1':
+                    brca_vus_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
 
     ## Look for shared samples between cis het VUS and PATHOGENIC variants
     brca_pathogenic_left_het_sample_set = set(brca_pathogenic_left_het_sample_list.keys())
