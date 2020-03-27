@@ -3,6 +3,7 @@ version 1.0
 workflow vus_cooccurrence {
     input {
         File SAMPLE_BCF
+        File SAMPLE_BCF_INDEX
         String OUTPUT_NAME
         String REGION
     }
@@ -28,6 +29,7 @@ workflow vus_cooccurrence {
     call setup_sample_data {
         input:
             in_sample_bcf=SAMPLE_BCF,
+            in_sample_bcf_index=SAMPLE_BCF_INDEX,
             in_region=REGION,
             in_ref_file=setup_brcaexchange_data.reference_file,
             in_seq_file=setup_brcaexchange_data.ref_seq_file
@@ -81,12 +83,13 @@ task setup_brcaexchange_data {
         chromosome_name="${split_region[0]}"
         out_brcaexchange_path_vcf=""
         out_brcaexchange_vus_vcf=""
+        ls -l /usr/src/app/
         if [ ${chromosome_name} = "chr17" ]; then
-            python3 ./extract_brcaexchange_data.py -g BRCA1 -o ~{outname}
+            python3 /usr/src/app/extract_brcaexchange_data.py -g BRCA1 -o ~{outname}
             out_brcaexchange_path_vcf="~{outname}.brca1.pathogenic.vcf"
             out_brcaexchange_uvs_vcf="~{outname}.brca1.vus.vcf"
         elif [ ${chromosome_name} = "chr13" ]; then
-            python3 ./extract_brcaexchange_data.py -g BRCA2 -o ~{outname}
+            python3 /usr/src/app/extract_brcaexchange_data.py -g BRCA2 -o ~{outname}
             out_brcaexchange_path_vcf="~{outname}.brca2.pathogenic.vcf"
             out_brcaexchange_vus_vcf="~{outname}.brca2.vus.vcf"
         fi
@@ -111,14 +114,15 @@ task normalize_brcaexchange_data {
     command <<<
         set -exu -o pipefail
         
-        bgzip ~{in_vcf} > input_vcf.gz
-        tabix -p vcf input_vcf.gz
+        ln -s ~{in_vcf} input.vcf
+        bgzip input.vcf
+        tabix -p vcf input.vcf.gz
        
         mkdir -p ${PWD}/seqrepo
         seqrepo -r ${PWD}/seqrepo pull -i 2019-06-20
         export HGVS_SEQREPO_DIR=${PWD}/seqrepo/2019-06-20
-        python3 ./hgvs_normalize.py \
-            -i input_vcf.gz \
+        python3 /usr/src/app/hgvs_normalize.py \
+            -i input.vcf.gz \
             -o brcaexchange.norm.vcf \
             -r ~{in_ref_file} \
             -g ~{in_seq_file}
@@ -141,6 +145,7 @@ task normalize_brcaexchange_data {
 task setup_sample_data {
     input {
         File in_sample_bcf
+        File in_sample_bcf_index
         String in_region
         File in_ref_file
         File in_seq_file
@@ -149,7 +154,9 @@ task setup_sample_data {
         set -exu -o pipefail
         
         # Extract specific region from vcf
-        bcftools filter --threads 8 --regions ~{in_region} ~{in_sample_bcf} > raw_sample.vcf
+        ln -s ~{in_sample_bcf} input_raw_sample.bcf
+        ln -s ~{in_sample_bcf_index} input_raw_sample.bcf.csi
+        bcftools filter --threads 8 --regions ~{in_region} input_raw_sample.bcf > raw_sample.vcf
         bgzip raw_sample.vcf
         tabix -p vcf raw_sample.vcf.gz
         
@@ -163,7 +170,7 @@ task setup_sample_data {
         mkdir -p ${PWD}/seqrepo
         seqrepo -r ${PWD}/seqrepo pull -i 2019-06-20
         export HGVS_SEQREPO_DIR=${PWD}/seqrepo/2019-06-20
-        python3 ./hgvs_normalize.py \
+        python3 /usr/src/app/hgvs_normalize.py \
             -i raw_sample.no_genotypes.vcf.gz \
             -o raw_sample.no_genotypes.norm.vcf \
             -r ~{in_ref_file} \
@@ -172,7 +179,7 @@ task setup_sample_data {
         # Merge normalized variant data with genotype data
         bcftools view -H raw_sample.no_genotypes.norm.vcf > raw_sample.no_genotypes.norm.no_header.vcf
         paste raw_sample.no_genotypes.norm.no_header.vcf raw_sample.genotypes.vcf > raw_sample.norm.paste.vcf
-        bcftools view -h raw_sample.no_genotypes.vcf.gz >> raw_sample.norm.vcf
+        bcftools view -h raw_sample.vcf.gz >> raw_sample.norm.vcf
         cat raw_sample.norm.paste.vcf >> raw_sample.norm.vcf
         vcf-sort -p 8 raw_sample.norm.vcf > raw_sample.norm.sorted.vcf
         bgzip raw_sample.norm.sorted.vcf
@@ -207,13 +214,13 @@ task intersect_variants {
         bcftools isec \
             -O v \
             -n =2 -w 1 \
+            -o intersected_variants.vcf \
             query.vcf.gz \
-            base.vcf.gz \
-            > intersected_variants.vcf
+            base.vcf.gz
         vcf-sort -p 8 intersected_variants.vcf > intersected_variants.sorted.vcf
         bgzip intersected_variants.sorted.vcf
         tabix -p vcf intersected_variants.sorted.vcf.gz
-        rm -f intersected_variants.vcf
+        #rm -f intersected_variants.vcf
     >>>
     output {
         File intersected_vcf = "intersected_variants.sorted.vcf.gz"
@@ -241,7 +248,7 @@ task dectect_vus_benign {
         ln -s ~{in_intersect_path_vcf} path.vcf.gz
         ln -s ~{in_intersect_path_vcf_index} path.vcf.gz.tbi
         
-        python3 ./detect_vus_benign.py \
+        python3 /usr/src/app/detect_vus_benign.py \
             -i vus.vcf.gz \
             -j path.vcf.gz \
             -o ~{outname}.cooccurrence_report.txt \
