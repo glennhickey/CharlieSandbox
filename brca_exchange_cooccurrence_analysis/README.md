@@ -31,7 +31,9 @@ REGION=${REGION} \
 -c ./Sandbox/brca_exchange_cooccurrence_analysis/cromwell.local.conf \
 -d '/path/to/test_final_outputs'
 ```
-The final output will be located in `/path/to/test_final_outputs/*_vus_cooccurrence/`
+The workflow with output the following:
+- Apparent Benign VUS variants VCF located in `/path/to/test_final_outputs/*_vus_cooccurrence/output_links/apparent_benign_vus_vcf`
+- Basic cooccurrence count report located in `/path/to/test_final_outputs/*_vus_cooccurrence/output_links/cooccurrence_report`
 
 ### Running the workflow using scripts directly
 
