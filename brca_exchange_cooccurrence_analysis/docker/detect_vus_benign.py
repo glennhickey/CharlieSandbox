@@ -55,62 +55,94 @@ def main(args):
                 elif sample['GT'] == '1|1':
                     brca_vus_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
 
-    ## Look for shared samples between cis het VUS and PATHOGENIC variants
+    ## Single genotype samples sets ##
+    # samples containing PATH 1|0 genotype
     brca_pathogenic_left_het_sample_set = set(brca_pathogenic_left_het_sample_list.keys())
+    
+    # samples containing PATH 0|1 genotype
     brca_pathogenic_right_het_sample_set = set(brca_pathogenic_right_het_sample_list.keys())
+    
+    # samples containing PATH 1|1 genotype
     brca_pathogenic_hom_sample_set = set(brca_pathogenic_hom_sample_list.keys())
+    
+    # samples containing VUS 1|0 genotype
     brca_vus_left_het_sample_set = set(brca_vus_left_het_sample_list.keys())
+    
+    # samples containing VUS 0|1 genotype
     brca_vus_right_het_sample_set = set(brca_vus_right_het_sample_list.keys())
+    
+    # samples containing VUS 1|1 genotype
     brca_vus_hom_sample_set = set(brca_vus_hom_sample_list.keys())
 
+    ## Compound genotype sample sets ##
+    # samples containing both PATH 1|0 and PATH 0|1 genotypes
     brca_left_het_path_right_het_path_set = brca_pathogenic_left_het_sample_set.intersection(brca_pathogenic_right_het_sample_set)
+    
+    # samples containing both PATH 1|0 and VUS 1|0 genotypes
     brca_left_het_coocourance_sample_set = brca_pathogenic_left_het_sample_set.intersection(brca_vus_left_het_sample_set)
+    
+    # samples containing both PATH 1|0 and VUS 0|1 genotypes
     brca_left_het_path_right_het_vus_coocourance_sample_set = brca_pathogenic_left_het_sample_set.intersection(brca_vus_right_het_sample_set)
+    
+    # samples containing both PATH 1|0 and VUS 1|1 genotypes
     brca_left_het_path_hom_vus_coocourance_sample_set = brca_pathogenic_left_het_sample_set.intersection(brca_vus_hom_sample_set)
+    
+    # samples containing both PATH 0|1 and VUS 1|0 genotypes
     brca_right_het_path_left_het_vus_coocourance_sample_set = brca_pathogenic_right_het_sample_set.intersection(brca_vus_left_het_sample_set)
+    
+    # samples containing both PATH 0|1 and VUS 0|1 genotypes
     brca_right_het_path_right_het_vus_coocourance_sample_set = brca_pathogenic_right_het_sample_set.intersection(brca_vus_right_het_sample_set)
+    
+    # samples containing both PATH 0|1 and VUS 1|1 genotypes
     brca_right_het_path_hom_vus_coocourance_sample_set = brca_pathogenic_right_het_sample_set.intersection(brca_vus_hom_sample_set)
+    
+    # samples containing both PATH 1|1 and VUS 1|0 genotypes
     brca_hom_path_left_het_vus_coocourance_sample_set = brca_pathogenic_hom_sample_set.intersection(brca_vus_left_het_sample_set)
+    
+    # samples containing both PATH 1|1 and VUS 0|1 genotypes
     brca_hom_path_right_het_vus_coocourance_sample_set = brca_pathogenic_hom_sample_set.intersection(brca_vus_right_het_sample_set)
+    
+    # samples containing both PATH 1|1 and VUS 1|1 genotypes
     brca_hom_path_hom_vus_coocourance_sample_set = brca_pathogenic_hom_sample_set.intersection(brca_vus_hom_sample_set)
 
-    brca_trans_intersection_sample_set = set.intersection(brca_left_het_path_right_het_vus_coocourance_sample_set, brca_right_het_path_left_het_vus_coocourance_sample_set, brca_right_het_path_hom_vus_coocourance_sample_set, brca_left_het_path_hom_vus_coocourance_sample_set)
-
-    brca_trans_union_sample_set = set.union(brca_left_het_path_right_het_vus_coocourance_sample_set, brca_right_het_path_left_het_vus_coocourance_sample_set, brca_right_het_path_hom_vus_coocourance_sample_set, brca_left_het_path_hom_vus_coocourance_sample_set)
+    # samples containing either (PATH 1|0 and VUS 0|1), (PATH 0|1 and VUS 1|0) or (VUS 1|1)
+    brca_trans_union_sample_set = set.union(brca_left_het_path_right_het_vus_coocourance_sample_set, brca_right_het_path_left_het_vus_coocourance_sample_set, brca_vus_hom_sample_set)
 
     ## Look at unique vus variants that coincide with concurrance sample set
+    # VUS variants in samples with (PATH 1|0 and VUS 0|1)
     brca_concurrent_vus_coordinates_category_8 = list()
     for sample in brca_left_het_path_right_het_vus_coocourance_sample_set:
         brca_concurrent_vus_coordinates_category_8.append(brca_vus_right_het_sample_list[sample])
 
+    # VUS variants in samples with (PATH 1|0 and VUS 1|1)
     brca_concurrent_vus_coordinates_category_9 = list()
     for sample in brca_left_het_path_hom_vus_coocourance_sample_set:
         brca_concurrent_vus_coordinates_category_9.append(brca_vus_hom_sample_list[sample])
 
+    # VUS variants in samples with (PATH 0|1 and VUS 1|0)
     brca_concurrent_vus_coordinates_category_10 = list()
     for sample in brca_right_het_path_left_het_vus_coocourance_sample_set:
         brca_concurrent_vus_coordinates_category_10.append(brca_vus_left_het_sample_list[sample])
 
-
+    # VUS variants in samples with (PATH 0|1 and VUS 1|1)
     brca_concurrent_vus_coordinates_category_12 = list()
     for sample in brca_right_het_path_hom_vus_coocourance_sample_set:
         brca_concurrent_vus_coordinates_category_12.append(brca_vus_hom_sample_list[sample])
-
-
+    
+    # VUS variants in samples with (VUS 1|1)
+    brca_concurrent_vus_coordinates_category_13 = list()
+    for sample in brca_vus_hom_sample_set:
+        brca_concurrent_vus_coordinates_category_13.append(brca_vus_hom_sample_list[sample])
+    
+    
+    # Flatten out the variant lists into sets
     brca_concurrent_vus_coordinates_category_8_set = set([val for sublist in brca_concurrent_vus_coordinates_category_8 for val in sublist])
     brca_concurrent_vus_coordinates_category_9_set = set([val for sublist in brca_concurrent_vus_coordinates_category_9 for val in sublist])
     brca_concurrent_vus_coordinates_category_10_set = set([val for sublist in brca_concurrent_vus_coordinates_category_10 for val in sublist])
     brca_concurrent_vus_coordinates_category_12_set = set([val for sublist in brca_concurrent_vus_coordinates_category_12 for val in sublist])
+    brca_concurrent_vus_coordinates_category_13_set = set([val for sublist in brca_concurrent_vus_coordinates_category_13 for val in sublist])
 
-    total_concurrent_vus_coordinates_set = set.union(brca_concurrent_vus_coordinates_category_8_set, brca_concurrent_vus_coordinates_category_9_set, brca_concurrent_vus_coordinates_category_10_set, brca_concurrent_vus_coordinates_category_12_set)
-
-    # total_concurrent_vus_coordinates_set represents the vus brca exchange variants where at least one sample in the topMed dataset had that vus variant called a het at one spot and also had a pathogenic brca exchange variant that was trans het at another spot.
-
-    ## Count number of unique apparent benign VUS variants that coocour with > 1 pathogenic variant
-    #brca_aparent_benign_VUS_coocour_greater_1_PATH_set = set()
-    #for sample in brca_left_het_path_right_het_vus_coocourance_sample_set:
-    #    if len(brca_pathogenic_left_het_sample_list[sample]) > 1:
-    #        brca_aparent_benign_VUS_coocour_greater_1_PATH_set.append()
+    total_concurrent_vus_coordinates_set = set.union(brca_concurrent_vus_coordinates_category_8_set, brca_concurrent_vus_coordinates_category_10_set, brca_concurrent_vus_coordinates_category_13_set)
 
     ## Output co-occurrence report
     with open(options.outReport, 'w') as report_file:
@@ -140,6 +172,7 @@ def main(args):
         report_file.write("Total unique VUS in (Pathogenic 1|0 - VUS 1|1) set : {}\n".format(len(brca_concurrent_vus_coordinates_category_9_set)))
         report_file.write("Total unique VUS in (Pathogenic 0|1 - VUS 1|0) set : {}\n".format(len(brca_concurrent_vus_coordinates_category_10_set)))
         report_file.write("Total unique VUS in (Pathogenic 0|1 - VUS 1|1) set : {}\n".format(len(brca_concurrent_vus_coordinates_category_12_set)))
+        report_file.write("Total unique VUS in (VUS 1|1) set : {}\n".format(len(brca_concurrent_vus_coordinates_category_13_set)))
         report_file.write("Total unique apparent-benign VUS : {}\n".format(len(total_concurrent_vus_coordinates_set)))
         
     ## Output apparent-benign VUS variants list
