@@ -141,9 +141,12 @@ def main(args):
     brca_concurrent_vus_coordinates_category_10_set = set([val for sublist in brca_concurrent_vus_coordinates_category_10 for val in sublist])
     brca_concurrent_vus_coordinates_category_12_set = set([val for sublist in brca_concurrent_vus_coordinates_category_12 for val in sublist])
     brca_concurrent_vus_coordinates_category_13_set = set([val for sublist in brca_concurrent_vus_coordinates_category_13 for val in sublist])
-
+    
+    # Union all apparent benign vus variants into one set
     total_concurrent_vus_coordinates_set = set.union(brca_concurrent_vus_coordinates_category_8_set, brca_concurrent_vus_coordinates_category_10_set, brca_concurrent_vus_coordinates_category_13_set)
-
+    
+    # Union all samples
+    
     ## Output co-occurrence report
     with open(options.outReport, 'w') as report_file:
         report_file.write("Pathogenic variant concordance\n")
@@ -174,6 +177,21 @@ def main(args):
         report_file.write("Total unique VUS in (Pathogenic 0|1 - VUS 1|1) set : {}\n".format(len(brca_concurrent_vus_coordinates_category_12_set)))
         report_file.write("Total unique VUS in (VUS 1|1) set : {}\n".format(len(brca_concurrent_vus_coordinates_category_13_set)))
         report_file.write("Total unique apparent-benign VUS : {}\n".format(len(total_concurrent_vus_coordinates_set)))
+    
+    ## Output to verbose report:
+    complete_report_filename = "complete_{}".format(options.outReport)
+    with open(complete_report_filename, 'w') as complete_report_file:
+        complete_report_file.write("sample_name\ttype\tapparent_benign_vus_variant\tsupporting_path_variants\n")
+        # VUS variants in samples with (PATH 1|0 and VUS 0|1)
+        for sample in brca_left_het_path_right_het_vus_coocourance_sample_set:
+            complete_report_file.write("{}\tVUS_0|1_PATH_1|0\t{}\t{}\n".format(sample, brca_vus_right_het_sample_list[sample], brca_pathogenic_left_het_sample_list[sample]))
+        # VUS variants in samples with (PATH 0|1 and VUS 1|0)
+        for sample in brca_right_het_path_left_het_vus_coocourance_sample_set:
+            complete_report_file.write("{}\tVUS_1|0_PATH_0|1\t{}\t{}\n".format(sample, brca_vus_left_het_sample_list[sample], brca_pathogenic_right_het_sample_list[sample]))
+        # VUS variants in samples with (VUS 1|1)
+        for sample in brca_vus_hom_sample_set:
+            brca_concurrent_vus_coordinates_category_13.append(brca_vus_hom_sample_list[sample])
+            complete_report_file.write("{}\tVUS_1|1\t{}\t{}\n".format(sample, brca_vus_hom_sample_list[sample]))
         
     ## Output apparent-benign VUS variants list
     with open(options.outVariants, 'w') as vcf_file:

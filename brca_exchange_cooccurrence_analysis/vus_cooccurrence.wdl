@@ -61,6 +61,7 @@ workflow vus_cooccurrence {
     
     output {
         File cooccurrence_report = dectect_vus_benign.cooccurrence_report
+        File complete_cooccurrence_report = dectect_vus_benign.complete_cooccurrence_report
         File apparent_benign_vus_vcf = dectect_vus_benign.apparent_benign_vus_vcf
         File apparent_benign_vus_vcf_index = dectect_vus_benign.apparent_benign_vus_vcf_index
     }
@@ -261,6 +262,7 @@ task dectect_vus_benign {
     >>>
     output {
         File cooccurrence_report = "~{outname}.cooccurrence_report.txt"
+        File complete_cooccurrence_report = "complete_~{outname}.cooccurrence_report.txt"
         File apparent_benign_vus_vcf = "~{outname}.apperent_benign_vus_list.sorted.vcf.gz"
         File apparent_benign_vus_vcf_index = "~{outname}.apperent_benign_vus_list.sorted.vcf.gz.tbi"
     }
