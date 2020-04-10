@@ -298,7 +298,7 @@ task concat_vcfs {
     }
 }
 
-task dectect_vus_benign {
+task detect_vus_benign {
     input {
         File in_intersect_vus_vcf
         File in_intersect_vus_vcf_index
