@@ -191,7 +191,7 @@ def main(args):
         # VUS variants in samples with (VUS 1|1)
         for sample in brca_vus_hom_sample_set:
             brca_concurrent_vus_coordinates_category_13.append(brca_vus_hom_sample_list[sample])
-            complete_report_file.write("{}\tVUS_1|1\t{}\t{}\n".format(sample, brca_vus_hom_sample_list[sample]))
+            complete_report_file.write("{}\tVUS_1|1\t{}\n".format(sample, brca_vus_hom_sample_list[sample]))
         
     ## Output apparent-benign VUS variants list
     with open(options.outVariants, 'w') as vcf_file:

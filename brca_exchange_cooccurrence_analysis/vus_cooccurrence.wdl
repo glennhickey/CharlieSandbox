@@ -25,6 +25,12 @@ workflow vus_cooccurrence {
             in_ref_file=setup_brcaexchange_data.reference_file,
             in_seq_file=setup_brcaexchange_data.ref_seq_file
     }
+    call normalize_brcaexchange_data as normalize_brca_all {
+        input:
+            in_vcf=setup_brcaexchange_data.all_vcf,
+            in_ref_file=setup_brcaexchange_data.reference_file,
+            in_seq_file=setup_brcaexchange_data.ref_seq_file
+    }
     
     call setup_sample_data {
         input:
@@ -40,30 +46,48 @@ workflow vus_cooccurrence {
             in_base_vcf=normalize_brca_path.normalized_vcf,
             in_base_vcf_index=normalize_brca_path.normalized_vcf_index,
             in_query_vcf=setup_sample_data.normalized_vcf,
-            in_query_vcf_index=setup_sample_data.normalized_vcf_index
+            in_query_vcf_index=setup_sample_data.normalized_vcf_index,
+            complement=false
     }
     call intersect_variants as intersect_vus_variants {
         input:
             in_base_vcf=normalize_brca_vus.normalized_vcf,
             in_base_vcf_index=normalize_brca_vus.normalized_vcf_index,
             in_query_vcf=setup_sample_data.normalized_vcf,
-            in_query_vcf_index=setup_sample_data.normalized_vcf_index
+            in_query_vcf_index=setup_sample_data.normalized_vcf_index,
+            complement=false
+    }
+    call intersect_variants as intersect_all_variants {
+        input:
+            in_base_vcf=normalize_brca_all.normalized_vcf,
+            in_base_vcf_index=normalize_brca_all.normalized_vcf_index,
+            in_query_vcf=setup_sample_data.normalized_vcf,
+            in_query_vcf_index=setup_sample_data.normalized_vcf_index,
+            complement=true
     }
     
-    call dectect_vus_benign {
+    call concat_vcfs {
         input:
-            in_intersect_vus_vcf=intersect_vus_variants.intersected_vcf,
-            in_intersect_vus_vcf_index=intersect_vus_variants.intersected_vcf_index,
+            in_a_vcf=intersect_vus_variants.intersected_vcf,
+            in_a_vcf_index=intersect_vus_variants.intersected_vcf_index,
+            in_b_vcf=intersect_all_variants.intersected_vcf_index,
+            in_b_vcf_index=intersect_all_variants.intersected_vcf_index,
+    }
+    
+    call detect_vus_benign {
+        input:
+            in_intersect_vus_vcf=concat_vcfs.concatenated_vcf,
+            in_intersect_vus_vcf_index=concat_vcfs.concatenated_vcf_index,
             in_intersect_path_vcf=intersect_path_variants.intersected_vcf,
             in_intersect_path_vcf_index=intersect_path_variants.intersected_vcf_index,
             outname=OUTPUT_NAME
     }
     
     output {
-        File cooccurrence_report = dectect_vus_benign.cooccurrence_report
-        File complete_cooccurrence_report = dectect_vus_benign.complete_cooccurrence_report
-        File apparent_benign_vus_vcf = dectect_vus_benign.apparent_benign_vus_vcf
-        File apparent_benign_vus_vcf_index = dectect_vus_benign.apparent_benign_vus_vcf_index
+        File cooccurrence_report = detect_vus_benign.cooccurrence_report
+        File complete_cooccurrence_report = detect_vus_benign.complete_cooccurrence_report
+        File apparent_benign_vus_vcf = detect_vus_benign.apparent_benign_vus_vcf
+        File apparent_benign_vus_vcf_index = detect_vus_benign.apparent_benign_vus_vcf_index
     }
 }
 
@@ -82,17 +106,11 @@ task setup_brcaexchange_data {
         
         IFS=':' read -ra split_region <<< "~{in_region}"
         chromosome_name="${split_region[0]}"
-        out_brcaexchange_path_vcf=""
-        out_brcaexchange_vus_vcf=""
         ls -l /usr/src/app/
         if [ ${chromosome_name} = "chr17" ]; then
             python3 /usr/src/app/extract_brcaexchange_data.py -g BRCA1 -o ~{outname}
-            out_brcaexchange_path_vcf="~{outname}.brca1.pathogenic.vcf"
-            out_brcaexchange_uvs_vcf="~{outname}.brca1.vus.vcf"
         elif [ ${chromosome_name} = "chr13" ]; then
             python3 /usr/src/app/extract_brcaexchange_data.py -g BRCA2 -o ~{outname}
-            out_brcaexchange_path_vcf="~{outname}.brca2.pathogenic.vcf"
-            out_brcaexchange_vus_vcf="~{outname}.brca2.vus.vcf"
         fi
     >>>
     output {
@@ -100,6 +118,7 @@ task setup_brcaexchange_data {
         File ref_seq_file = "ncbiRefSeq.txt"
         File pathogenic_vcf = glob("*.pathogenic.vcf")[0]
         File vus_vcf = glob("*.vus.vcf")[0]
+        File all_vcf = glob("*.all.vcf")[0]
     }
     runtime {
         docker: 'quay.io/cmarkello/vus_cooccurrence:latest'
@@ -203,6 +222,7 @@ task intersect_variants {
         File in_base_vcf_index
         File in_query_vcf
         File in_query_vcf_index
+        Boolean complement
     }
     command <<<
         set -exu -o pipefail
@@ -212,20 +232,65 @@ task intersect_variants {
         ln -s ~{in_query_vcf} query.vcf.gz
         ln -s ~{in_query_vcf_index} query.vcf.gz.tbi
         
-        bcftools isec \
-            -O v \
-            -n =2 -w 1 \
-            -o intersected_variants.vcf \
-            query.vcf.gz \
-            base.vcf.gz
+        if [ ~{complement} == false ]; then
+            bcftools isec \
+                -O v \
+                -n =2 -w 1 \
+                -o intersected_variants.vcf \
+                query.vcf.gz \
+                base.vcf.gz
+        else
+            bcftools isec \
+                -O v \
+                -n =2 -w 1 \
+                -o intersected_variants.vcf \
+                -c \
+                query.vcf.gz \
+                base.vcf.gz
+        fi
         vcf-sort -p 8 intersected_variants.vcf > intersected_variants.sorted.vcf
         bgzip intersected_variants.sorted.vcf
         tabix -p vcf intersected_variants.sorted.vcf.gz
-        #rm -f intersected_variants.vcf
+        rm -f intersected_variants.vcf
     >>>
     output {
         File intersected_vcf = "intersected_variants.sorted.vcf.gz"
         File intersected_vcf_index = "intersected_variants.sorted.vcf.gz.tbi"
+    }
+    runtime {
+        cpu: 8
+        docker: 'quay.io/cmarkello/vus_cooccurrence:latest'
+    }
+}
+
+task concat_vcfs {
+    input {
+        File in_a_vcf
+        File in_a_vcf_index
+        File in_b_vcf
+        File in_b_vcf_index
+    }
+    command <<<
+        ln -s ~{in_a_vcf} a.vcf.gz
+        ln -s ~{in_a_vcf_index} a.vcf.gz.tbi 
+        ln -s ~{in_b_vcf} b.vcf.gz
+        ln -s ~{in_b_vcf_index} b.vcf.gz.tbi
+        
+        bcftools concat \
+            -O v \
+            --threads 8 \
+            -o "concatenated.vcf"
+            a.vcf.gz \
+            b.vcf.gz
+        
+        vcf-sort -p 8 concatenated.vcf > concatenated.sorted.vcf
+        bgzip concatenated.sorted.vcf
+        tabix -p vcf concatenated.sorted.vcf.gz
+        rm -f concatenated.vcf
+    >>>
+    output {
+        File concatenated_vcf = "concatenated.sorted.vcf.gz"
+        File concatenated_vcf_index =  "concatenated.sorted.vcf.gz.tbi"
     }
     runtime {
         cpu: 8
