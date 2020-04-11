@@ -70,7 +70,7 @@ workflow vus_cooccurrence {
         input:
             in_a_vcf=intersect_vus_variants.intersected_vcf,
             in_a_vcf_index=intersect_vus_variants.intersected_vcf_index,
-            in_b_vcf=intersect_all_variants.intersected_vcf_index,
+            in_b_vcf=intersect_all_variants.intersected_vcf,
             in_b_vcf_index=intersect_all_variants.intersected_vcf_index,
     }
     
@@ -242,9 +242,9 @@ task intersect_variants {
         else
             bcftools isec \
                 -O v \
-                -n =2 -w 1 \
+                -w 1 \
+                -C \
                 -o intersected_variants.vcf \
-                -c \
                 query.vcf.gz \
                 base.vcf.gz
         fi
@@ -279,7 +279,7 @@ task concat_vcfs {
         bcftools concat \
             -O v \
             --threads 8 \
-            -o "concatenated.vcf"
+            -o "concatenated.vcf" \
             a.vcf.gz \
             b.vcf.gz
         
