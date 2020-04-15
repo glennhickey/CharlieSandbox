@@ -5,12 +5,12 @@ workflow vus_cooccurrence {
         File SAMPLE_BCF
         File SAMPLE_BCF_INDEX
         String OUTPUT_NAME
-        String REGION
+        String GENE
     }
     
     call setup_brcaexchange_data {
         input:
-            in_region=REGION,
+            in_gene=GENE,
             outname=OUTPUT_NAME
     }
     call normalize_brcaexchange_data as normalize_brca_path {
@@ -36,7 +36,7 @@ workflow vus_cooccurrence {
         input:
             in_sample_bcf=SAMPLE_BCF,
             in_sample_bcf_index=SAMPLE_BCF_INDEX,
-            in_region=REGION,
+            in_gene=GENE,
             in_ref_file=setup_brcaexchange_data.reference_file,
             in_seq_file=setup_brcaexchange_data.ref_seq_file
     }
@@ -93,7 +93,7 @@ workflow vus_cooccurrence {
 
 task setup_brcaexchange_data {
     input {
-        String in_region
+        String in_gene
         String outname
     }
     command <<<
@@ -104,14 +104,7 @@ task setup_brcaexchange_data {
         gzip -d hg38.p12.fa.gz
         gzip -d ncbiRefSeq.txt.gz
         
-        IFS=':' read -ra split_region <<< "~{in_region}"
-        chromosome_name="${split_region[0]}"
-        ls -l /usr/src/app/
-        if [ ${chromosome_name} = "chr17" ]; then
-            python3 /usr/src/app/extract_brcaexchange_data.py -g BRCA1 -o ~{outname}
-        elif [ ${chromosome_name} = "chr13" ]; then
-            python3 /usr/src/app/extract_brcaexchange_data.py -g BRCA2 -o ~{outname}
-        fi
+        python3 /usr/src/app/extract_brcaexchange_data.py -g ~{in_gene} -o ~{outname}
     >>>
     output {
         File reference_file = "hg38.p12.fa"
@@ -166,7 +159,7 @@ task setup_sample_data {
     input {
         File in_sample_bcf
         File in_sample_bcf_index
-        String in_region
+        String in_gene
         File in_ref_file
         File in_seq_file
     }
@@ -176,7 +169,20 @@ task setup_sample_data {
         # Extract specific region from vcf
         ln -s ~{in_sample_bcf} input_raw_sample.bcf
         ln -s ~{in_sample_bcf_index} input_raw_sample.bcf.csi
-        bcftools filter --threads 8 --regions ~{in_region} input_raw_sample.bcf > raw_sample.vcf
+        
+        mkdir -p ${PWD}/cache
+        export PYENSEMBL_CACHE_DIR=${PWD}/cache
+        pyensembl install --release 99 --species homo_sapiens
+        gene_region=$(
+        python <<CODE
+        import pyensembl
+        ensembl = pyensembl.EnsemblRelease(release=99)
+        gene_data = ensembl.genes_by_name("~{in_gene}")
+        print('chr{}:{}-{}'.format(gene_data[0].contig, gene_data[0].start, gene_data[0].end))
+        CODE
+        )
+        
+        bcftools filter --threads 8 --regions ${gene_region} input_raw_sample.bcf > raw_sample.vcf
         bgzip raw_sample.vcf
         tabix -p vcf raw_sample.vcf.gz
         

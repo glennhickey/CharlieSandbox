@@ -19,14 +19,14 @@ Setup input variables to the full paths to the population joint-genotyped and ph
 INPUT_SAMPLE_BCF='/path/to/chr17.phased.bcf'
 INPUT_SAMPLE_BCF_INDEX='/path/to/chr17.phased.bcf.csi'
 OUTPUT_NAME='test_brca1_wdl'
-REGION='chr17:43044295-43170245'
+GENE='BRCA1'
 ```
 Or for BRCA2 variants:
 ```
 INPUT_SAMPLE_BCF='/path/to/chr13.phased.bcf'
 INPUT_SAMPLE_BCF_INDEX='/path/to/chr13.phased.bcf.csi'
 OUTPUT_NAME='test_brca2_wdl'
-REGION='chr13:32310000-32400000'
+GENE='BRCA2'
 ```
 
 Run the WDL workflow on Cromwell using miniwdl
@@ -35,7 +35,7 @@ miniwdl cromwell ./Sandbox/brca_exchange_cooccurrence_analysis/vus_cooccurrence.
 SAMPLE_BCF=${INPUT_SAMPLE_BCF} \
 SAMPLE_BCF_INDEX=${INPUT_SAMPLE_BCF_INDEX} \
 OUTPUT_NAME=${OUTPUT_NAME} \
-REGION=${REGION} \
+GENE=${GENE} \
 -c ./Sandbox/brca_exchange_cooccurrence_analysis/cromwell.local.conf \
 -d '/path/to/test_final_outputs'
 ```
