@@ -32,28 +32,50 @@ def main(args):
         brca_pathogenic_right_het_sample_list = defaultdict(list)
         brca_pathogenic_hom_sample_list = defaultdict(list)
         for record in vcf_reader_pathogenic:
+            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT.strip('][').split(', ')[0],record.INFO['AF'][0])
             for sample in record.samples:
                 if sample['GT'] == '1|0':
-                    brca_pathogenic_left_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                    brca_pathogenic_left_het_sample_list[sample.sample].append(variant_record)
                 elif sample['GT'] == '0|1':
-                    brca_pathogenic_right_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                    brca_pathogenic_right_het_sample_list[sample.sample].append(variant_record)
                 elif sample['GT'] == '1|1':
-                    brca_pathogenic_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                    brca_pathogenic_hom_sample_list[sample.sample].append(variant_record)
     
     ## Isolate samples by the 2 different phased VUS het calls
+    VUS_hom_HWE_stats = defaultdict(list)
     with open(options.inVUSvcf, 'rb') as inVUSvcf_file:
         vcf_reader_vus = vcf.Reader(inVUSvcf_file)
         brca_vus_left_het_sample_list = defaultdict(list)
         brca_vus_right_het_sample_list = defaultdict(list)
         brca_vus_hom_sample_list = defaultdict(list)
         for record in vcf_reader_vus:
+            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT.strip('][').split(', ')[0],record.INFO['AF'][0])
+            HWE_obs_genotype_freq = list()
+            HWE_exp_genotype_freq = list()
+            HWE_obs_genotype_freq.append(0)
+            HWE_obs_genotype_freq.append(0)
+            HWE_obs_genotype_freq.append(0)
             for sample in record.samples:
-                if sample['GT'] == '1|0':
-                    brca_vus_left_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                if sample['GT'] == '0|0':
+                    HWE_obs_genotype_freq[0] += 1
+                elif sample['GT'] == '1|0':
+                    HWE_obs_genotype_freq[1] += 1
+                    brca_vus_left_het_sample_list[sample.sample].append(variant_record)
                 elif sample['GT'] == '0|1':
-                    brca_vus_right_het_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                    HWE_obs_genotype_freq[1] += 1
+                    brca_vus_right_het_sample_list[sample.sample].append(variant_record)
                 elif sample['GT'] == '1|1':
-                    brca_vus_hom_sample_list[sample.sample].append("{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT))
+                    HWE_obs_genotype_freq[2] += 1
+                    brca_vus_hom_sample_list[sample.sample].append(variant_record)
+            # Hardy Weinberg Calculation
+            if HWE_obs_genotype_freq[2] > 0:
+                q_allele_freq = float(record.INFO['AF'][0])
+                p_allele_freq = 1.0 - float(record.INFO['AF'][0])
+                HWE_exp_genotype_freq.append((p_allele_freq * p_allele_freq)*len(record.samples))
+                HWE_exp_genotype_freq.append((2.0 * p_allele_freq * q_allele_freq)*len(record.samples))
+                HWE_exp_genotype_freq.append((q_allele_freq * q_allele_freq)*len(record.samples))
+                chi_square_stat = sum([((HWE_obs - HWE_exp) * (HWE_obs - HWE_exp))/HWE_exp for HWE_obs, HWE_exp in zip(HWE_obs_genotype_freq,HWE_exp_genotype_freq)])
+                VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chi_square_stat]
 
     ## Single genotype samples sets ##
     # samples containing PATH 1|0 genotype
@@ -190,9 +212,16 @@ def main(args):
             complete_report_file.write("{}\tVUS_1|0_PATH_0|1\t{}\t{}\n".format(sample, brca_vus_left_het_sample_list[sample], brca_pathogenic_right_het_sample_list[sample]))
         # VUS variants in samples with (VUS 1|1)
         for sample in brca_vus_hom_sample_set:
-            brca_concurrent_vus_coordinates_category_13.append(brca_vus_hom_sample_list[sample])
             complete_report_file.write("{}\tVUS_1|1\t{}\n".format(sample, brca_vus_hom_sample_list[sample]))
-        
+    
+    ## Output to hom var VUS Hardy-Weinberg Equilibrium report
+    hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
+    with open(hwe_report_filename, 'w') as hwe_report_file:
+        hwe_report_file.write("variant_record\thwe_obs_(0/0,0/1,1/1)\thwe_obs_(0/0,0/1,1/1)\tp_freq\tq_freq\tchi_square_stat\n")   
+        for variant_record in VUS_hom_HWE_stats.keys():
+            hwe_stats = VUS_hom_HWE_stats[variant_record]
+            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}".format(hwe_stats, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4]))
+     
     ## Output apparent-benign VUS variants list
     with open(options.outVariants, 'w') as vcf_file:
         vcf_file.write("##fileformat=VCFv4.2\n")
@@ -200,14 +229,16 @@ def main(args):
             vcf_file.write("##contig=<ID=chr13,length=114364328>\n")
         elif 'chr17' in record.CHROM:
             vcf_file.write("##contig=<ID=chr17,length=83257441>\n")
+        vcf_file.write('##INFO=<ID=AF,Number=A,Type=Float,Description="Alternate Allele Frequency from Best-guess Genotypes">\n')
         vcf_file.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
         for variant in total_concurrent_vus_coordinates_set:
             variant_elements = variant.split('_')
             chromosome_element = variant_elements[0]
             position_element = variant_elements[1]
             ref_allele_element = variant_elements[2]
-            alt_allele_element = variant_elements[3].strip('][').split(', ')[0]
-            vcf_file.write("{}\t{}\t.\t{}\t{}\t.\t.\t.\n".format(chromosome_element,position_element,ref_allele_element,alt_allele_element))
+            alt_allele_element = variant_elements[3]
+            allele_freq_element = variant_elements[4]
+            vcf_file.write("{}\t{}\t.\t{}\t{}\t.\t.\t{}\n".format(chromosome_element,position_element,ref_allele_element,alt_allele_element,allele_freq_element))
     
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
