@@ -32,7 +32,7 @@ def main(args):
         brca_pathogenic_right_het_sample_list = defaultdict(list)
         brca_pathogenic_hom_sample_list = defaultdict(list)
         for record in vcf_reader_pathogenic:
-            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT.strip('][').split(', ')[0],record.INFO['AF'][0])
+            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],record.INFO['AF'][0])
             for sample in record.samples:
                 if sample['GT'] == '1|0':
                     brca_pathogenic_left_het_sample_list[sample.sample].append(variant_record)
@@ -49,7 +49,7 @@ def main(args):
         brca_vus_right_het_sample_list = defaultdict(list)
         brca_vus_hom_sample_list = defaultdict(list)
         for record in vcf_reader_vus:
-            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT.strip('][').split(', ')[0],record.INFO['AF'][0])
+            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],record.INFO['AF'][0])
             HWE_obs_genotype_freq = list()
             HWE_exp_genotype_freq = list()
             HWE_obs_genotype_freq.append(0)
@@ -217,10 +217,10 @@ def main(args):
     ## Output to hom var VUS Hardy-Weinberg Equilibrium report
     hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
     with open(hwe_report_filename, 'w') as hwe_report_file:
-        hwe_report_file.write("variant_record\thwe_obs_(0/0,0/1,1/1)\thwe_obs_(0/0,0/1,1/1)\tp_freq\tq_freq\tchi_square_stat\n")   
+        hwe_report_file.write("variant_record\thwe_obs_(0/0,0/1,1/1)\thwe_exp_(0/0,0/1,1/1)\tp_freq\tq_freq\tchi_square_stat\n")   
         for variant_record in VUS_hom_HWE_stats.keys():
             hwe_stats = VUS_hom_HWE_stats[variant_record]
-            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}".format(hwe_stats, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4]))
+            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(variant_record, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4]))
      
     ## Output apparent-benign VUS variants list
     with open(options.outVariants, 'w') as vcf_file:
