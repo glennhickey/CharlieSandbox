@@ -1,4 +1,7 @@
 import vcf, argparse, sys
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import chisquare
 from collections import defaultdict
 
 def parse_args():
@@ -74,8 +77,9 @@ def main(args):
                 HWE_exp_genotype_freq.append((p_allele_freq * p_allele_freq)*len(record.samples))
                 HWE_exp_genotype_freq.append((2.0 * p_allele_freq * q_allele_freq)*len(record.samples))
                 HWE_exp_genotype_freq.append((q_allele_freq * q_allele_freq)*len(record.samples))
+                chisquare_value = chisquare(HWE_obs_genotype_freq,HWE_exp_genotype_freq,ddof=1)
                 chi_square_stat = sum([((HWE_obs - HWE_exp) * (HWE_obs - HWE_exp))/HWE_exp for HWE_obs, HWE_exp in zip(HWE_obs_genotype_freq,HWE_exp_genotype_freq)])
-                VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chi_square_stat]
+                VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chi_square_stat, chisquare_value[0], chisquare_value[1]]
 
     ## Single genotype samples sets ##
     # samples containing PATH 1|0 genotype
@@ -216,12 +220,28 @@ def main(args):
     
     ## Output to hom var VUS Hardy-Weinberg Equilibrium report
     hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
+    hwe_chi_square_stats = list()
+    hwe_chi_square_pvalues = list()
+    minor_allele_freqs = list()
     with open(hwe_report_filename, 'w') as hwe_report_file:
-        hwe_report_file.write("variant_record\thwe_obs_(0/0,0/1,1/1)\thwe_exp_(0/0,0/1,1/1)\tp_freq\tq_freq\tchi_square_stat\n")   
+        hwe_report_file.write("variant_record\thwe_obs_(0/0,0/1,1/1)\thwe_exp_(0/0,0/1,1/1)\tp_freq\tq_freq\tchi_square_stat\tscipy_chi_square_stat\tscipy_chi_square_p_value\n")   
         for variant_record in VUS_hom_HWE_stats.keys():
             hwe_stats = VUS_hom_HWE_stats[variant_record]
-            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}\n".format(variant_record, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4]))
-     
+            hwe_chi_square_stats.append(hwe_stats[5])
+            hwe_chi_square_pvalues.append(hwe_stats[6])
+            minor_allele_freqs.append(hwe_stats[3])
+            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(variant_record, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4], hwe_stats[5], hwe_stats[6]))
+    # Build histogram plots and save to .png files
+    plt.hist(hwe_chi_square_stats, bins=20)
+    plt.title("Hom VUS chi square stat distribution")
+    plt.savefig("hom_vus_chi_square_stat.{}.png".format(options.outReport))
+    plt.hist(hwe_chi_square_pvalues, bins=20)
+    plt.title("Hom VUS chi square pvalue distribution")
+    plt.savefig("hom_vus_chi_square_pvalue.{}.png".format(options.outReport))
+    plt.hist(minor_allele_freqs, bins=20)
+    plt.title("Hom VUS allele frequency distribution")
+    plt.savefig("hom_vus_allele_frequencies.{}.png".format(options.outReport))
+         
     ## Output apparent-benign VUS variants list
     with open(options.outVariants, 'w') as vcf_file:
         vcf_file.write("##fileformat=VCFv4.2\n")
