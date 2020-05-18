@@ -55,7 +55,7 @@ def ilgf(s,z):
 def chisquarecdf(x,k):
     return 1-ilgf(k/2,x/2)/gf(k/2)
 
-def chisquare(observed_values,expected_values):
+def chisquare_custom(observed_values,expected_values):
     test_statistic=0
 
     for observed, expected in zip(observed_values, expected_values):
