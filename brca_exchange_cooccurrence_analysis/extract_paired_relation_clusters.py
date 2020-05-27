@@ -39,15 +39,23 @@ def main(args):
             clusters[row[0]].add(row[1])
     
     clusters_2 = clusters.copy()
+    key_del_list = list()
     for k1,v1 in clusters.items():
         for k2,v2 in clusters_2.items():
-            if (k1 in v2) or (k2 in v1) or len(v1 & v2) >= 1:
-                print('merging k1: {}, deleting k2: {}'.format(k1,k2))
+            if (k1 in v2) or len(v1 & v2) >= 1 or (k1 == k2):
+                print('merging k1: {}, k2: {}'.format(k1,k2))
                 clusters[k1].update(v2)
                 clusters[k1].add(k2)
-                if clusters[k2]: del clusters[k2]
+                if k1 != k2 and clusters[k2]:
+                    print('\tdeleting k2: {}'.format(k2))
+                    key_del_list.append(k2)
     print("Finished 1st pass")
-    #import pdb; pdb.set_trace()
+    clusters_final = clusters.copy()
+    for key in key_del_list:
+        if key in clusters_final:
+            del clusters_final[key]
+    print("Finished deletion pass")
+    import pdb; pdb.set_trace()
     with open(options.outReport, 'w') as cluster_output_file:
         for k,v in clusters.items():
             cluster_output_file.write("{}\t{}\n".format(k, '\t'.join(v)))
