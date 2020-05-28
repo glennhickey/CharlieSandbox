@@ -44,11 +44,11 @@ def main(args):
         for k2,v2 in clusters_2.items():
             if (k1 in v2) or len(v1 & v2) >= 1 or (k1 == k2):
                 print('merging k1: {}, k2: {}'.format(k1,k2))
-                clusters[k1].update(v2)
-                clusters[k1].add(k2)
+                clusters[k2].update(v1)
+                clusters[k2].add(k1)
                 if k1 != k2 and clusters[k2]:
-                    print('\tdeleting k2: {}'.format(k2))
-                    key_del_list.append(k2)
+                    print('\tdeleting k1: {}'.format(k1))
+                    key_del_list.append(k1)
     print("Finished 1st pass")
     clusters_final = clusters.copy()
     for key in key_del_list:
