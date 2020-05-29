@@ -26,16 +26,11 @@ def main(args):
     clusters_idx = 0
     
     # Cycle through each pair and assign a set cluster for each
-    first_key = None
-    first_value = None
     with open(options.inPairCSV, 'r') as f:
         reader = csv.reader(f, delimiter='\t')
         for row in reader:
             print("{}\t{}".format(row[0],row[1]))
             if "ID" in row[0]: continue
-            if not first_key and not first_value:
-                first_key = row[0]
-                first_value = row[1]
             clusters[row[0]].add(row[1])
     
     clusters_2 = clusters.copy()
@@ -43,11 +38,11 @@ def main(args):
     for k1,v1 in clusters.items():
         for k2,v2 in clusters_2.items():
             if (k1 in v2) or len(v1 & v2) >= 1 or (k1 == k2):
-                print('merging k1: {}, k2: {}'.format(k1,k2))
+                #print('merging k1: {}, k2: {}'.format(k1,k2))
                 clusters[k2].update(v1)
                 clusters[k2].add(k1)
-                if k1 != k2 and clusters[k2]:
-                    print('\tdeleting k1: {}'.format(k1))
+                if k1 != k2 and clusters[k2] and k2 not in key_del_list:
+                    #print('\tdeleting k1: {}'.format(k1))
                     key_del_list.append(k1)
     print("Finished 1st pass")
     clusters_final = clusters.copy()

@@ -1,10 +1,11 @@
 import vcf, argparse, sys
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 import math
 from scipy.stats import chisquare
 from collections import defaultdict
+import matplotlib
+matplotlib.use('Agg')
 
 def parse_args():
     """ 
@@ -52,20 +53,20 @@ def main(args):
         
     
     # Build histogram plots and save to .png files
-    fig1, ax1 = plt.subplots()
+    fig1, ax1 = matplotlib.pyplot.subplots()
     logbins = np.geomspace(min_genotypes, max_genotypes, 100)
     ax1.hist(hom_var_dict.values(), bins=logbins)
     ax1.set_title("Hom ALT Genotype Sample Distribution LOG")
-    plt.xscale('log')
+    matplotlib.pyplot.xscale('log')
     fig1.savefig("hom_alt_dist_log.{}.png".format(options.outReport))
-    plt.close(fig1)
+    matplotlib.pyplot.close(fig1)
     
-    fig2, ax2 = plt.subplots()
+    fig2, ax2 = matplotlib.pyplot.subplots()
     ax2.hist(hom_var_dict.values(), bins=100)
     ax2.set_title("Hom ALT Genotype Sample Distribution LINEAR")
-    plt.xscale('linear')
+    matplotlib.pyplot.xscale('linear')
     fig2.savefig("hom_alt_dist_linear.{}.png".format(options.outReport))
-    plt.close(fig2)
+    matplotlib.pyplot.close(fig2)
     
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
