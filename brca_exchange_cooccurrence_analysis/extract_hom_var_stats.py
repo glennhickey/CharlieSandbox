@@ -87,8 +87,8 @@ def main(args):
     hom_prop_dict = defaultdict(float)
     het_prop_dict = defaultdict(float)
     for sample in hom_var_dict.keys():
-        hom_prop_dict[sample] = hom_var_dict[sample] / (hom_var_dict[sample] + het_dict[sample] + hom_ref_dict[sample])
-        het_prop_dict[sample] = het_dict[sample] / (hom_var_dict[sample] + het_dict[sample] + hom_ref_dict[sample])
+        hom_prop_dict[sample] = float(hom_var_dict[sample]) / (float(hom_var_dict[sample]) + float(het_dict[sample]) + float(hom_ref_dict[sample]))
+        het_prop_dict[sample] = float(het_dict[sample]) / (float(hom_var_dict[sample]) + float(het_dict[sample]) + float(hom_ref_dict[sample]))
     
     x_list = list()
     y_list = list()
@@ -107,6 +107,7 @@ def main(args):
     ax3.set_ylabel('heterozygous proportion')
     fig3.savefig("hom_het_prop_scatter.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig3)
+    import pdb; pdb.set_trace()
      
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

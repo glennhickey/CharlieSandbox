@@ -51,9 +51,9 @@ def main(args):
         if key in clusters_final:
             del clusters_final[key]
     print("Finished deletion pass")
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     with open(options.outReport, 'w') as cluster_output_file:
-        for k,v in clusters.items():
+        for k,v in clusters_final.items():
             cluster_output_file.write("{}\t{}\n".format(k, '\t'.join(v)))
     
 if __name__ == "__main__":
