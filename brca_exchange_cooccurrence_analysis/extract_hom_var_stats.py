@@ -43,11 +43,12 @@ def main(args):
             het_dict[call.sample] += 1
         for call in record.get_hom_refs():
             hom_ref_dict[call.sample] += 1
-   
+    
+    hom_vus_list = defaultdict(int)
     with open(options.inHOMALT, 'r') as homalt_file:
         for line in homalt_file:
             if 'VUS_1|1' in line.split('\t')[1]:
-                hom_vus_list.append(line.split('\t')[0])
+                hom_vus_list[line.split('\t')[0]] = 1
      
     # Compile and output report
     num_samples = len(hom_var_dict)

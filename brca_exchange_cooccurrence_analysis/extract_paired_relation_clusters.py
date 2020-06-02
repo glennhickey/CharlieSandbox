@@ -34,17 +34,16 @@ def main(args):
             clusters[row[0]].add(row[1])
     
     clusters_2 = clusters.copy()
-    key_del_list = set()
-    for c, (k1,v1) in enumerate(clusters.items()):
-        for k2,v2 in clusters_2.items():
+    key_del_list = list()
+    for c, k1 in enumerate(sorted(clusters.keys())):
+        v1 = clusters[k1]
+        for k2 in sorted(clusters_2.keys()):
+            v2 = clusters_2[k2]
             if (k1 in v2) or len(v1 & v2) >= 1 or (k1 == k2):
-                #print('merging k1: {}, k2: {}'.format(k1,k2))
                 clusters[k2].update(v1)
                 clusters[k2].add(k1)
-                if (k1 != k2) and (k2 not in key_del_list):
-                    #if k1 != k2 and clusters[k2] and (k2 not in key_del_list):
-                    #print('\tdeleting k1: {}'.format(k1))
-                    key_del_list.add(k1)
+                if k1 != k2:
+                    key_del_list.append(k1)
         print("line: {}/{}".format(c,'164351'))
     print("Finished 1st pass")
     clusters_final = clusters.copy()
