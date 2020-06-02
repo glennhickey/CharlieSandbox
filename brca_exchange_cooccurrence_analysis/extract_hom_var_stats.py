@@ -1,11 +1,12 @@
+import matplotlib
+matplotlib.use('Agg')
 import vcf, argparse, sys
 import numpy as np
 import pandas as pd
 import math
 from scipy.stats import chisquare
 from collections import defaultdict
-import matplotlib
-matplotlib.use('Agg')
+import matplotlib.pyplot
 
 def parse_args():
     """ 
@@ -17,6 +18,8 @@ def parse_args():
     parser = argparse.ArgumentParser('Input VCF and output homozygous alt report and histogram.')
     parser.add_argument('-i', '--inVCF', type=str,
         help='Input vcf filepath.')
+    parser.add_argument('-v', '--inHOMALT', type=str,
+        help='Input list of samples that contain at least 1 homozygous alt VUS genotype.')
     parser.add_argument('-o', '--outReport', type=str,
         help='Output report filename.')
 
@@ -30,11 +33,22 @@ def main(args):
     
     vcf_reader = vcf.Reader(open(options.inVCF, 'r'))
     hom_var_dict = defaultdict(int)
-
+    het_dict = defaultdict(int)
+    hom_ref_dict = defaultdict(int)
+    
     for record in vcf_reader:
         for call in record.get_hom_alts():
             hom_var_dict[call.sample] += 1
-    
+        for call in record.get_hets():
+            het_dict[call.sample] += 1
+        for call in record.get_hom_refs():
+            hom_ref_dict[call.sample] += 1
+   
+    with open(options.inHOMALT, 'r') as homalt_file:
+        for line in homalt_file:
+            if 'VUS_1|1' in line.split('\t')[1]:
+                hom_vus_list.append(line.split('\t')[0])
+     
     # Compile and output report
     num_samples = len(hom_var_dict)
     min_genotypes = min(hom_var_dict.values())
@@ -68,6 +82,31 @@ def main(args):
     fig2.savefig("hom_alt_dist_linear.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig2)
     
+    # hom vs het proportion analysis
+    hom_prop_dict = defaultdict(float)
+    het_prop_dict = defaultdict(float)
+    for sample in hom_var_dict.keys():
+        hom_prop_dict[sample] = hom_var_dict[sample] / (hom_var_dict[sample] + het_dict[sample] + hom_ref_dict[sample])
+        het_prop_dict[sample] = het_dict[sample] / (hom_var_dict[sample] + het_dict[sample] + hom_ref_dict[sample])
+    
+    x_list = list()
+    y_list = list()
+    c_list = list()
+    for sample in hom_var_dict.keys():
+        x_list.append(hom_prop_dict[sample])
+        y_list.append(het_prop_dict[sample])
+        if sample in hom_vus_list:
+            c_list.append('r')
+        else:
+            c_list.append('b')
+    fig3, ax3 = matplotlib.pyplot.subplots()
+    ax3.scatter(x_list, y_list, color=c_list)
+    ax3.set_title("Homozygous alt Proportion to Heterozygous Proportion")
+    ax3.set_xlabel('homozygous alt proportion')
+    ax3.set_ylabel('heterozygous proportion')
+    fig3.savefig("hom_het_prop_scatter.{}.png".format(options.outReport))
+    matplotlib.pyplot.close(fig3)
+     
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
 
