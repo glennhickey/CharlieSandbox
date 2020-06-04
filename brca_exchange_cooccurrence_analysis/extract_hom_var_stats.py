@@ -7,6 +7,7 @@ import math
 from scipy.stats import chisquare
 from collections import defaultdict
 import matplotlib.pyplot
+import ast
 
 def parse_args():
     """ 
@@ -48,7 +49,7 @@ def main(args):
     with open(options.inHOMALT, 'r') as homalt_file:
         for line in homalt_file:
             if 'VUS_1|1' in line.split('\t')[1]:
-                hom_vus_list[line.split('\t')[0]] = 1
+                hom_vus_list[line.split('\t')[0]] = len(ast.literal_eval(line.split('\t')[2]))
      
     # Compile and output report
     num_samples = len(hom_var_dict)
@@ -94,19 +95,32 @@ def main(args):
     y_list = list()
     c_list = list()
     for sample in hom_var_dict.keys():
-        x_list.append(hom_prop_dict[sample])
-        y_list.append(het_prop_dict[sample])
         if sample in hom_vus_list:
+            x_list.append(hom_vus_list[sample])
+            y_list.append(het_dict[sample])
             c_list.append('r')
-        else:
-            c_list.append('b')
     fig3, ax3 = matplotlib.pyplot.subplots()
-    ax3.scatter(x_list, y_list, color=c_list)
-    ax3.set_title("Homozygous alt Proportion to Heterozygous Proportion")
-    ax3.set_xlabel('homozygous alt proportion')
-    ax3.set_ylabel('heterozygous proportion')
-    fig3.savefig("hom_het_prop_scatter.{}.png".format(options.outReport))
+    ax3.scatter(x_list, y_list, s=2, color=c_list)
+    ax3.set_title("Homozygous VUS Counts to Heterozygous Counts")
+    ax3.set_xlabel('homozygous VUS counts')
+    ax3.set_ylabel('heterozygous counts')
+    fig3.savefig("hom_VUS_het_counts_scatter.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig3)
+    x_list = list()
+    y_list = list()
+    c_list = list()
+    for sample in hom_var_dict.keys():
+        if sample in hom_vus_list:
+            x_list.append(hom_var_dict[sample] - hom_vus_list[sample])
+            y_list.append(het_dict[sample])
+            c_list.append('b')
+    fig4, ax4 = matplotlib.pyplot.subplots()
+    ax4.scatter(x_list, y_list, s=2, color=c_list)
+    ax4.set_title("Homozygous non-VUS Counts to Heterozygous Counts")
+    ax4.set_xlabel('homozygous non-VUS counts')
+    ax4.set_ylabel('heterozygous counts')
+    fig4.savefig("hom_non_VUS_het_counts_scatter.{}.png".format(options.outReport))
+    matplotlib.pyplot.close(fig4)
     import pdb; pdb.set_trace()
      
 if __name__ == "__main__":

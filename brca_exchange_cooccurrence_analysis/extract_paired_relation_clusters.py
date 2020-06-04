@@ -44,7 +44,7 @@ def main(args):
                 clusters[k2].add(k1)
                 if k1 != k2:
                     key_del_list.append(k1)
-        print("line: {}/{}".format(c,'164351'))
+        print("line: {}/{}".format(c,'38546'))
     print("Finished 1st pass")
     clusters_final = clusters.copy()
     for key in key_del_list:

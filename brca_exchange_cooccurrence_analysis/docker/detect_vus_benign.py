@@ -5,6 +5,7 @@ import pandas as pd
 import math
 from scipy.stats import chisquare
 from collections import defaultdict
+import hail
 
 def parse_args():
     """ 
