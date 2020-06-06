@@ -5,7 +5,7 @@ import pandas as pd
 import math
 from scipy.stats import chisquare
 from collections import defaultdict
-import hail
+import hail as hl
 
 def parse_args():
     """ 
@@ -60,7 +60,7 @@ def chisquare_custom(observed_values,expected_values):
     test_statistic=0
 
     for observed, expected in zip(observed_values, expected_values):
-        test_statistic+=(float(observed)-float(expected))**2/float(expected)
+        test_statistic+=(abs(float(observed)-float(expected))-0.5)**2/float(expected)
 
     df=1
     print("test_statistic: {}".format(test_statistic))
@@ -100,6 +100,7 @@ def main(args):
             HWE_obs_genotype_freq.append(0)
             HWE_obs_genotype_freq.append(0)
             HWE_obs_genotype_freq.append(0)
+            print(variant_record)
             for sample in record.samples:
                 if sample['GT'] == '0|0':
                     HWE_obs_genotype_freq[0] += 1
@@ -120,7 +121,58 @@ def main(args):
                 HWE_exp_genotype_freq.append((2.0 * p_allele_freq * q_allele_freq)*len(record.samples))
                 HWE_exp_genotype_freq.append((q_allele_freq * q_allele_freq)*len(record.samples))
                 chisquare_value = chisquare(HWE_obs_genotype_freq,HWE_exp_genotype_freq,ddof=1)
-                VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chisquare_value[0], chisquare_value[1]]
+                levene_haldane_hwe_calc = hl.eval(hl.hardy_weinberg_test(HWE_obs_genotype_freq[0],HWE_obs_genotype_freq[1],HWE_obs_genotype_freq[2]))
+                VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chisquare_value[0], chisquare_value[1], levene_haldane_hwe_calc.het_freq_hwe, levene_haldane_hwe_calc.p_value]
+    
+    ## Output to hom var VUS Hardy-Weinberg Equilibrium report
+    hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
+    hwe_chi_square_stats = list()
+    hwe_chi_square_pvalues = list()
+    minor_allele_freqs = list()
+    hwe_hl_dist_pvalues = list()
+    with open(hwe_report_filename, 'w') as hwe_report_file:
+        hwe_report_file.write("variant_record\thwe_obs_(0/0,0/1,1/1)\thwe_exp_(0/0,0/1,1/1)\tp_freq\tq_freq\tscipy_chi_square_stat\tscipy_chi_square_p_value\n")   
+        for variant_record in VUS_hom_HWE_stats.keys():
+            hwe_stats = VUS_hom_HWE_stats[variant_record]
+            hwe_chi_square_stats.append(hwe_stats[4])
+            hwe_chi_square_pvalues.append(hwe_stats[5])
+            minor_allele_freqs.append(hwe_stats[3])
+            hwe_hl_dist_pvalues.append(hwe_stats[7])
+            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(variant_record, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4], hwe_stats[5], hwe_stats[6], hwe_stats[7]))
+    # Build histogram plots and save to .png files
+    print("hwe_chi_square_stats: {}".format(hwe_chi_square_stats))
+    fig1, ax1 = plt.subplots()
+    hwe_chi_square_stats = pd.Series(hwe_chi_square_stats)
+    logbins = np.geomspace(hwe_chi_square_stats.min(), hwe_chi_square_stats.max(), 100)
+    ax1.hist(hwe_chi_square_stats, bins=logbins)
+    ax1.set_title("Hom VUS chi square stat distribution")
+    plt.xscale('log')
+    fig1.savefig("hom_vus_chi_square_stat.{}.png".format(options.outReport))
+    plt.close(fig1)
+    print("hwe_chi_square_pvalues: {}".format(hwe_chi_square_pvalues))
+    fig2, ax2 = plt.subplots()
+    ax2.hist(hwe_chi_square_pvalues, bins=50)
+    ax2.set_title("Hom VUS corrected chi square pvalue distribution")
+    plt.xscale('linear')
+    fig2.savefig("hom_vus_chi_square_pvalue.{}.png".format(options.outReport))
+    plt.close(fig2)
+    print("minor_allele_freqs: {}".format(minor_allele_freqs))
+    fig3, ax3 = plt.subplots()
+    minor_allele_freqs = pd.Series(minor_allele_freqs)
+    logbins = np.geomspace(minor_allele_freqs.min(), minor_allele_freqs.max(), 100)
+    ax3.hist(minor_allele_freqs, bins=logbins)
+    ax3.set_title("Hom VUS allele frequency distribution")
+    plt.xscale('log')
+    fig3.savefig("hom_vus_allele_frequencies.{}.png".format(options.outReport))
+    plt.close(fig3)
+    print("hwe_hl_dist_pvalues: {}".format(hwe_hl_dist_pvalues))
+    fig4, ax4 = plt.subplots()
+    ax4.hist(hwe_hl_dist_pvalues, bins=50)
+    ax4.set_title("Hom VUS Levene-Haldane exact test pvalue distribution")
+    plt.xscale('linear')
+    fig4.savefig("hom_vus_hl_exact_pvalue.{}.png".format(options.outReport))
+    plt.close(fig4)
+    import pdb; pdb.set_trace()
 
     ## Single genotype samples sets ##
     # samples containing PATH 1|0 genotype
@@ -259,45 +311,6 @@ def main(args):
         for sample in brca_vus_hom_sample_set:
             complete_report_file.write("{}\tVUS_1|1\t{}\n".format(sample, brca_vus_hom_sample_list[sample]))
     
-    ## Output to hom var VUS Hardy-Weinberg Equilibrium report
-    hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
-    hwe_chi_square_stats = list()
-    hwe_chi_square_pvalues = list()
-    minor_allele_freqs = list()
-    with open(hwe_report_filename, 'w') as hwe_report_file:
-        hwe_report_file.write("variant_record\thwe_obs_(0/0,0/1,1/1)\thwe_exp_(0/0,0/1,1/1)\tp_freq\tq_freq\tscipy_chi_square_stat\tscipy_chi_square_p_value\n")   
-        for variant_record in VUS_hom_HWE_stats.keys():
-            hwe_stats = VUS_hom_HWE_stats[variant_record]
-            hwe_chi_square_stats.append(hwe_stats[4])
-            hwe_chi_square_pvalues.append(hwe_stats[5])
-            minor_allele_freqs.append(hwe_stats[3])
-            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(variant_record, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4], hwe_stats[5]))
-    # Build histogram plots and save to .png files
-    print("hwe_chi_square_stats: {}".format(hwe_chi_square_stats))
-    fig1, ax1 = plt.subplots()
-    hwe_chi_square_stats = pd.Series(hwe_chi_square_stats)
-    logbins = np.geomspace(hwe_chi_square_stats.min(), hwe_chi_square_stats.max(), 100)
-    ax1.hist(hwe_chi_square_stats, bins=logbins)
-    ax1.set_title("Hom VUS chi square stat distribution")
-    plt.xscale('log')
-    fig1.savefig("hom_vus_chi_square_stat.{}.png".format(options.outReport))
-    plt.close(fig1)
-    print("hwe_chi_square_pvalues: {}".format(hwe_chi_square_pvalues))
-    fig2, ax2 = plt.subplots()
-    ax2.hist(hwe_chi_square_pvalues, bins=50)
-    ax2.set_title("Hom VUS chi square pvalue distribution")
-    plt.xscale('linear')
-    fig2.savefig("hom_vus_chi_square_pvalue.{}.png".format(options.outReport))
-    plt.close(fig2)
-    print("minor_allele_freqs: {}".format(minor_allele_freqs))
-    fig3, ax3 = plt.subplots()
-    minor_allele_freqs = pd.Series(minor_allele_freqs)
-    logbins = np.geomspace(minor_allele_freqs.min(), minor_allele_freqs.max(), 100)
-    ax3.hist(minor_allele_freqs, bins=logbins)
-    ax3.set_title("Hom VUS allele frequency distribution")
-    plt.xscale('log')
-    fig3.savefig("hom_vus_allele_frequencies.{}.png".format(options.outReport))
-    plt.close(fig3)
         
     ## Output apparent-benign VUS variants list
     with open(options.outVariants, 'w') as vcf_file:

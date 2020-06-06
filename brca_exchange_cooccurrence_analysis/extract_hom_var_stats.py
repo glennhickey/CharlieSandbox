@@ -38,6 +38,9 @@ def main(args):
     hom_ref_dict = defaultdict(int)
     
     for record in vcf_reader:
+        if not hom_var_dict[call.sample]: hom_var_dict[call.sample] = 0
+        if not het_dict[call.sample]: het_dict[call.sample] = 0
+        if not hom_ref_dict[call.sample]: hom_ref_dict[call.sample] = 0
         for call in record.get_hom_alts():
             hom_var_dict[call.sample] += 1
         for call in record.get_hets():

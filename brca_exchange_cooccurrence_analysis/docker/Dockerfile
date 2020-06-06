@@ -1,16 +1,13 @@
-FROM conda/miniconda3
+FROM openjdk:8-slim
+COPY --from=python:3.7 / /
 WORKDIR /usr/src/app
-RUN conda create -n hail python'>=3.6,<3.8'
-SHELL ["conda", "run", "-n", "hail", "/bin/bash", "-c"]
-RUN pip install --upgrade pip
-RUN pip install cython
-RUN pip install IPython==5.0
-RUN conda install -c bioconda pyvcf
-RUN pip install "urllib3<1.25,>=1.21.1" "requests<2.21.1,>=2.21.0"
-RUN pip install hail
-RUN pip install hgvs pyhgvs pyfaidx biocommons.seqrepo pyensembl numpy "scipy<1.4,>1.2" "tqdm==4.42.1" matplotlib ipython jupyter "pandas<0.26,>0.24" sympy nose
-RUN apt-get -y update
-RUN apt-get install -y rsync tabix bcftools vcftools openjdk-8-jre-headless
+RUN mkdir -p /usr/share/man/man1 && \
+    apt-get update && apt-get install -y rsync tabix bcftools vcftools \
+    && rm -rf /var/lib/apt/lists/* && \
+    pip3 --no-cache-dir install hail ipython
+RUN python3 -m pip install --upgrade pip
+RUN python3 -m pip install cython IPython==5.0 requests hgvs pyhgvs pyfaidx biocommons.seqrepo pyensembl numpy scipy matplotlib jupyter pandas sympy nose
+RUN python3 -m pip install pyvcf
 COPY . .
 CMD [ "/bin/bash" ]
 
