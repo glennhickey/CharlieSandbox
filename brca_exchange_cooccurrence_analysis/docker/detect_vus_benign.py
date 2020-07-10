@@ -7,7 +7,7 @@ import pandas as pd
 import math
 from scipy.stats import chisquare
 from collections import defaultdict
-import hail as hl
+#import hail as hl
 
 def parse_args():
     """ 
@@ -123,15 +123,15 @@ def main(args):
                 HWE_exp_genotype_freq.append((2.0 * p_allele_freq * q_allele_freq)*len(record.samples))
                 HWE_exp_genotype_freq.append((q_allele_freq * q_allele_freq)*len(record.samples))
                 chisquare_value = chisquare(HWE_obs_genotype_freq,HWE_exp_genotype_freq,ddof=1)
-                levene_haldane_hwe_calc = hl.eval(hl.hardy_weinberg_test(HWE_obs_genotype_freq[0],HWE_obs_genotype_freq[1],HWE_obs_genotype_freq[2]))
-                VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chisquare_value[0], chisquare_value[1], levene_haldane_hwe_calc.het_freq_hwe, levene_haldane_hwe_calc.p_value]
+                #levene_haldane_hwe_calc = hl.eval(hl.hardy_weinberg_test(HWE_obs_genotype_freq[0],HWE_obs_genotype_freq[1],HWE_obs_genotype_freq[2]))
+                VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chisquare_value[0], chisquare_value[1]]
     
     ## Output to hom var VUS Hardy-Weinberg Equilibrium report
     hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
     hwe_chi_square_stats = list()
     hwe_chi_square_pvalues = list()
     minor_allele_freqs = list()
-    hwe_hl_dist_pvalues = list()
+    #hwe_hl_dist_pvalues = list()
     with open(hwe_report_filename, 'w') as hwe_report_file:
         hwe_report_file.write("variant_record\thwe_obs_(0/0,0/1,1/1)\thwe_exp_(0/0,0/1,1/1)\tp_freq\tq_freq\tscipy_chi_square_stat\tscipy_chi_square_p_value\n")   
         for variant_record in VUS_hom_HWE_stats.keys():
@@ -139,8 +139,8 @@ def main(args):
             hwe_chi_square_stats.append(hwe_stats[4])
             hwe_chi_square_pvalues.append(hwe_stats[5])
             minor_allele_freqs.append(hwe_stats[3])
-            hwe_hl_dist_pvalues.append(hwe_stats[7])
-            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(variant_record, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4], hwe_stats[5], hwe_stats[6], hwe_stats[7]))
+            #hwe_hl_dist_pvalues.append(hwe_stats[7])
+            hwe_report_file.write("{}\t{}\t{}\t{}\t{}\t{}\t{}\n".format(variant_record, hwe_stats[0], hwe_stats[1], hwe_stats[2], hwe_stats[3], hwe_stats[4], hwe_stats[5]))
     # Build histogram plots and save to .png files
     print("hwe_chi_square_stats: {}".format(hwe_chi_square_stats))
     fig1, ax1 = plt.subplots()
@@ -167,14 +167,14 @@ def main(args):
     plt.xscale('log')
     fig3.savefig("hom_vus_allele_frequencies.{}.png".format(options.outReport))
     plt.close(fig3)
-    print("hwe_hl_dist_pvalues: {}".format(hwe_hl_dist_pvalues))
-    fig4, ax4 = plt.subplots()
-    ax4.hist(hwe_hl_dist_pvalues, bins=50)
-    ax4.set_title("Hom VUS Levene-Haldane exact test pvalue distribution")
-    plt.xscale('linear')
-    fig4.savefig("hom_vus_hl_exact_pvalue.{}.png".format(options.outReport))
-    plt.close(fig4)
-    import pdb; pdb.set_trace()
+    #print("hwe_hl_dist_pvalues: {}".format(hwe_hl_dist_pvalues))
+    #fig4, ax4 = plt.subplots()
+    #ax4.hist(hwe_hl_dist_pvalues, bins=50)
+    #ax4.set_title("Hom VUS Levene-Haldane exact test pvalue distribution")
+    #plt.xscale('linear')
+    #fig4.savefig("hom_vus_hl_exact_pvalue.{}.png".format(options.outReport))
+    #plt.close(fig4)
+    #import pdb; pdb.set_trace()
 
     ## Single genotype samples sets ##
     # samples containing PATH 1|0 genotype
