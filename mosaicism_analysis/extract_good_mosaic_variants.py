@@ -15,6 +15,8 @@ def parse_args():
         help='Input maternal vcf sample name.')
     parser.add_argument('-p', '--inPaternalID', type=str,
         help='Inputpmaternal vcf sample name.')
+    parser.add_argument('-s', '--sibling_names', nargs='?', type=str, default=[], action='append',
+        help="sample names of siblings, including the proband. Optional.")
     parser.add_argument('-o', '--outReport', type=str,
         help='Output report filename.')
 
@@ -27,9 +29,12 @@ def main(args):
     vcf_reader = vcf.Reader(open(options.inVCF, 'rb'))
     # Collect sibling sample names
     sibling_name_list = list()
-    for sample_name in vcf_reader.samples:
-        if sample_name not in [options.inMaternalID, options.inPaternalID]:
-            sibling_name_list.append(sample_name)
+    if len(options.sibling_names) >= 1:
+        sibling_name_list = options.sibling_names
+    else:
+        for sample_name in vcf_reader.samples:
+            if sample_name not in [options.inMaternalID, options.inPaternalID]:
+                sibling_name_list.append(sample_name)
     
     sibling_records = defaultdict(list)
     sibling_filestreams = {}
