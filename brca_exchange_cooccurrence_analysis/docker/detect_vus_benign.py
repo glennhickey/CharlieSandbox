@@ -21,6 +21,8 @@ def parse_args():
         help='Input brcaexchange-VUS/sample-genotype concordant vcf filepath.')
     parser.add_argument('-j', '--inPATHvcf', type=str,
         help='Input brcaexchange-pathogenic/sample-genotype concordant vcf filepath.')
+    parser.add_argument('-s', '--inSITESvcf', type=str,
+        help='Input site vcf containing site-specitif annotation information.')
     parser.add_argument('-o', '--outReport', type=str,
         help='Output report filename.')
     parser.add_argument('-v', '--outVariants', type=str,
@@ -71,7 +73,10 @@ def chisquare_custom(observed_values,expected_values):
 def main(args):
 
     options = parse_args()
-
+    
+    if options.inSITESvcf:
+        sitesvcf_stream = open(options.inSITESvcf, 'rb')
+        sitesvcf_reader = vcf.Reader(sitesvcf_stream)
     ## Isolate samples by the 2 different phased PATHOGENIC het calls
     with open(options.inPATHvcf, 'rb') as inPATHvcf_file:
         vcf_reader_pathogenic = vcf.Reader(inPATHvcf_file)
@@ -79,7 +84,16 @@ def main(args):
         brca_pathogenic_right_het_sample_list = defaultdict(list)
         brca_pathogenic_hom_sample_list = defaultdict(list)
         for record in vcf_reader_pathogenic:
-            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],record.INFO['AF'][0])
+            allele_freq = ""
+            try:
+                allele_freq = record.INFO['AF'][0]
+            except:
+                for site_record in sitesvcf_reader.fetch(record.CHROM, record.start, record.end):
+                    allele_freq = site_record.INFO['AF'][0]
+                print('site_record: {}_{}_{}_{}'.format(site_record.CHROM, site_record.POS, site_record.REF, site_record.ALT[0]))
+                print('source_record: {}_{}_{}_{}'.format(record.CHROM,record.POS,record.REF,record.ALT[0]))
+                print('')
+            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],allele_freq)
             for sample in record.samples:
                 if sample['GT'] == '1|0':
                     brca_pathogenic_left_het_sample_list[sample.sample].append(variant_record)
@@ -96,7 +110,16 @@ def main(args):
         brca_vus_right_het_sample_list = defaultdict(list)
         brca_vus_hom_sample_list = defaultdict(list)
         for record in vcf_reader_vus:
-            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],record.INFO['AF'][0])
+            allele_freq = ""
+            try:
+                allele_freq = record.INFO['AF'][0]
+            except:
+                for site_record in sitesvcf_reader.fetch(record.CHROM, record.start, record.end):
+                    allele_freq = site_record.INFO['AF'][0]
+                print('site_record: {}_{}_{}_{}'.format(site_record.CHROM, site_record.POS, site_record.REF, site_record.ALT[0]))
+                print('source_record: {}_{}_{}_{}'.format(record.CHROM,record.POS,record.REF,record.ALT[0]))
+                print('')
+            variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],allele_freq)
             HWE_obs_genotype_freq = list()
             HWE_exp_genotype_freq = list()
             HWE_obs_genotype_freq.append(0)
@@ -117,14 +140,15 @@ def main(args):
                     brca_vus_hom_sample_list[sample.sample].append(variant_record)
             # Hardy Weinberg Calculation
             if HWE_obs_genotype_freq[2] > 0:
-                q_allele_freq = float(record.INFO['AF'][0])
-                p_allele_freq = 1.0 - float(record.INFO['AF'][0])
+                q_allele_freq = float(allele_freq)
+                p_allele_freq = 1.0 - float(allele_freq)
                 HWE_exp_genotype_freq.append((p_allele_freq * p_allele_freq)*len(record.samples))
                 HWE_exp_genotype_freq.append((2.0 * p_allele_freq * q_allele_freq)*len(record.samples))
                 HWE_exp_genotype_freq.append((q_allele_freq * q_allele_freq)*len(record.samples))
                 chisquare_value = chisquare(HWE_obs_genotype_freq,HWE_exp_genotype_freq,ddof=1)
                 #levene_haldane_hwe_calc = hl.eval(hl.hardy_weinberg_test(HWE_obs_genotype_freq[0],HWE_obs_genotype_freq[1],HWE_obs_genotype_freq[2]))
                 VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chisquare_value[0], chisquare_value[1]]
+    sitesvcf_stream.close()
     
     ## Output to hom var VUS Hardy-Weinberg Equilibrium report
     hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
@@ -161,7 +185,7 @@ def main(args):
     print("minor_allele_freqs: {}".format(minor_allele_freqs))
     fig3, ax3 = plt.subplots()
     minor_allele_freqs = pd.Series(minor_allele_freqs)
-    logbins = np.geomspace(minor_allele_freqs.min(), minor_allele_freqs.max(), 100)
+    logbins = np.geomspace(0.0000000000000000000000000000001, minor_allele_freqs.max(), 100)
     ax3.hist(minor_allele_freqs, bins=logbins)
     ax3.set_title("Hom VUS allele frequency distribution")
     plt.xscale('log')
