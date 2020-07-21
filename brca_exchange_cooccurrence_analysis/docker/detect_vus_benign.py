@@ -89,11 +89,17 @@ def main(args):
                 allele_freq = record.INFO['AF'][0]
             except:
                 for site_record in sitesvcf_reader.fetch(record.CHROM, record.start, record.end):
-                    allele_freq = site_record.INFO['AF'][0]
-                print('site_record: {}_{}_{}_{}'.format(site_record.CHROM, site_record.POS, site_record.REF, site_record.ALT[0]))
-                print('source_record: {}_{}_{}_{}'.format(record.CHROM,record.POS,record.REF,record.ALT[0]))
-                print('')
+                    if site_record.REF == record.REF and site_record.ALT[0] == record.ALT[0]:
+                        allele_freq = site_record.INFO['AF'][0]
+                        break
+                print('path site_record: {}_{}_{}_{}_{}_{}_{}'.format(site_record.CHROM, site_record.POS, site_record.REF, site_record.ALT[0], site_record.INFO['AF'], site_record.INFO['AF'][0], allele_freq))
+                print('path source_record: {}_{}_{}_{}'.format(record.CHROM,record.POS,record.REF,record.ALT[0]))
+            if str(float(allele_freq)) == "0.0":
+                print("Error: variant as allele frequency of 0")
+                sys.exit(1)
             variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],allele_freq)
+            print(variant_record)
+            print('')
             for sample in record.samples:
                 if sample['GT'] == '1|0':
                     brca_pathogenic_left_het_sample_list[sample.sample].append(variant_record)
@@ -115,10 +121,14 @@ def main(args):
                 allele_freq = record.INFO['AF'][0]
             except:
                 for site_record in sitesvcf_reader.fetch(record.CHROM, record.start, record.end):
-                    allele_freq = site_record.INFO['AF'][0]
-                print('site_record: {}_{}_{}_{}'.format(site_record.CHROM, site_record.POS, site_record.REF, site_record.ALT[0]))
-                print('source_record: {}_{}_{}_{}'.format(record.CHROM,record.POS,record.REF,record.ALT[0]))
-                print('')
+                    if site_record.REF == record.REF and site_record.ALT[0] == record.ALT[0]:
+                        allele_freq = site_record.INFO['AF'][0]
+                        break
+                print('vus site_record: {}_{}_{}_{}_{}_{}_{}'.format(site_record.CHROM, site_record.POS, site_record.REF, site_record.ALT[0], site_record.INFO['AF'], site_record.INFO['AF'][0], allele_freq))
+                print('vus source_record: {}_{}_{}_{}'.format(record.CHROM,record.POS,record.REF,record.ALT[0]))
+            if str(float(allele_freq)) == "0.0":
+                print("Error: variant as allele frequency of 0")
+                sys.exit(1)
             variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],allele_freq)
             HWE_obs_genotype_freq = list()
             HWE_exp_genotype_freq = list()
@@ -126,6 +136,7 @@ def main(args):
             HWE_obs_genotype_freq.append(0)
             HWE_obs_genotype_freq.append(0)
             print(variant_record)
+            print('')
             for sample in record.samples:
                 if sample['GT'] == '0|0':
                     HWE_obs_genotype_freq[0] += 1

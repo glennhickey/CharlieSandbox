@@ -4,6 +4,8 @@ workflow vus_cooccurrence {
     input {
         File SAMPLE_BCF
         File SAMPLE_BCF_INDEX
+        File SITES_VCF
+        File SITES_VCF_INDEX
         String OUTPUT_NAME
         String GENE
     }
@@ -80,6 +82,8 @@ workflow vus_cooccurrence {
             in_intersect_vus_vcf_index=concat_vcfs.concatenated_vcf_index,
             in_intersect_path_vcf=intersect_path_variants.intersected_vcf,
             in_intersect_path_vcf_index=intersect_path_variants.intersected_vcf_index,
+            in_sites_vcf=SITES_VCF,
+            in_sites_vcf_index=SITES_VCF_INDEX,
             outname=OUTPUT_NAME
     }
     
@@ -314,6 +318,8 @@ task detect_vus_benign {
         File in_intersect_vus_vcf_index
         File in_intersect_path_vcf
         File in_intersect_path_vcf_index
+        File in_sites_vcf
+        File in_sites_vcf_index
         String outname
     }
     command <<<
@@ -323,10 +329,13 @@ task detect_vus_benign {
         ln -s ~{in_intersect_vus_vcf_index} vus.vcf.gz.tbi
         ln -s ~{in_intersect_path_vcf} path.vcf.gz
         ln -s ~{in_intersect_path_vcf_index} path.vcf.gz.tbi
+        ln -s ~{in_sites_vcf} sites.vcf.gz
+        ln -s ~{in_sites_vcf_index} sites.vcf.gz.tbi
         
         python3 /usr/src/app/detect_vus_benign.py \
             -i vus.vcf.gz \
             -j path.vcf.gz \
+            -s sites.vcf.gz \
             -o ~{outname}.cooccurrence_report.txt \
             -v ~{outname}.apperent_benign_vus_list.vcf
         
