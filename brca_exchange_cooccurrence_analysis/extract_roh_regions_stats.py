@@ -25,6 +25,28 @@ def parse_args():
     options = parser.parse_args()
     return options
 
+# Shamelessly pulled from https://onestopdataanalysis.com/n50-genome/
+def calculate_N50(list_of_lengths):
+    """Calculate N50 for a sequence of numbers.
+    
+    Args:
+        list_of_lengths (list): List of numbers.
+    
+    Returns:
+        float: N50 value.
+    
+    """
+    tmp = []
+    for tmp_number in set(list_of_lengths):
+            tmp += [tmp_number] * list_of_lengths.count(tmp_number) * tmp_number
+    tmp.sort()
+    
+    if (len(tmp) % 2) == 0:
+        median = (tmp[int(len(tmp) / 2) - 1] + tmp[int(len(tmp) / 2)]) / 2
+    else:
+        median = tmp[int(len(tmp) / 2)]
+     
+    return median
 
 def main(args):
 
@@ -55,7 +77,19 @@ def main(args):
                 region_end = roh_region[2]
                 bed_file.write('{}\t{}\t{}\n'.format(region_chr,region_start,region_end))
     
-    #import pdb; pdb.set_trace()
+    for sample_id in roh_region_dict.keys():
+        sorted_list = sorted(roh_region_length_dict[sample_id])
+        num_stat = len(sorted_list)
+        min_stat = min(sorted_list)
+        Q1_stat = sorted_list[-int(len(sorted_list)*0.75)]
+        median_stat = sorted_list[-int(len(sorted_list)*0.5)]
+        Q3_stat = sorted_list[-int(len(sorted_list)*0.25)]
+        max_stat = max(sorted_list)
+        n50 = calculate_N50(sorted_list)
+        print(sample_id)
+        print('number\tmin\tQ1\tmedian\tQ3\tmax\tn50')
+        print('{}\t{}\t{}\t{}\t{}\t{}\t{}'.format(num_stat, min_stat, Q1_stat, median_stat, Q3_stat, max_stat, n50))
+        
     
      
 if __name__ == "__main__":
