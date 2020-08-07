@@ -19,6 +19,8 @@ def parse_args():
     parser = argparse.ArgumentParser('Input bcftools roh tab-delimited file and output roh report and histogram.')
     parser.add_argument('-i', '--inROH', type=str,
         help='Input bcftools roh output filepath.')
+    parser.add_argument('-r', '--regionLength', type=int,
+        help='Input region length from which ROH were analyzed.')
     parser.add_argument('-o', '--outReport', type=str,
         help='Output report filename.')
 
@@ -48,6 +50,32 @@ def calculate_N50(list_of_lengths):
      
     return median
 
+def calculate_SROH(list_of_lengths,region_length):
+    
+    sum_all = 0.0
+    sum_100kb = 0.0
+    sum_1mb = 0.0
+    sum_1500kb = 0.0
+    sum_5mb = 0.0
+    for length in list_of_lengths:
+        sum_all += length
+        if length >= 100000:
+            sum_100kb += length
+        if length >= 1000000:
+            sum_1mb += length
+        if length >= 1500000:
+            sum_1500kb += length
+        if length >= 5000000:
+            sum_5mb += length
+    
+    SROH_all = float(sum_all)/float(region_length)
+    SROH_100kb = float(sum_100kb)/float(region_length)
+    SROH_1mb = float(sum_1mb)/float(region_length)
+    SROH_1500kb = float(sum_1500kb)/float(region_length)
+    SROH_5mb = float(sum_5mb)/float(region_length)
+    
+    return [SROH_all,SROH_100kb,SROH_1mb,SROH_1500kb,SROH_5mb]
+    
 def main(args):
 
     options = parse_args()
@@ -68,31 +96,21 @@ def main(args):
                 quality = parsed_line[7]
                 roh_region_dict[sample_name].append([chromosome,start,end,length,num_markers,quality])
                 roh_region_length_dict[sample_name].append(int(length))
-    
-    
-    for sample_id in roh_region_dict.keys():
-        with open('{}_{}'.format(sample_id,options.outReport), 'w') as bed_file:
-            for roh_region in sorted(roh_region_dict[sample_id],key=lambda region_list:int(region_list[2])):
-                region_chr = roh_region[0]
-                region_start = roh_region[1]
-                region_end = roh_region[2]
-                bed_file.write('{}\t{}\t{}\n'.format(region_chr,region_start,region_end))
-    
-    for sample_id in roh_region_dict.keys():
-        sorted_list = sorted(roh_region_length_dict[sample_id])
-        num_stat = len(sorted_list)
-        min_stat = min(sorted_list)
-        Q1_stat = sorted_list[-int(len(sorted_list)*0.75)]
-        median_stat = sorted_list[-int(len(sorted_list)*0.5)]
-        Q3_stat = sorted_list[-int(len(sorted_list)*0.25)]
-        max_stat = max(sorted_list)
-        n50 = calculate_N50(sorted_list)
-        print(sample_id)
-        print('number\tmin\tQ1\tmedian\tQ3\tmax\tn50')
-        print('{}\t{}\t{}\t{}\t{}\t{}\t{}'.format(num_stat, min_stat, Q1_stat, median_stat, Q3_stat, max_stat, n50))
-        with open('{}_roh_lengths_list.{}'.format(sample_id,options.outReport), 'w') as lengths_file:
-            for length in sorted_list:
-                lengths_file.write('{}\n'.format(length))
+   
+    with open('roh_distribution_list.{}'.format(options.outReport), 'w') as distribution_file:
+        distribution_file.write('sample_id\tnumber(NROH)\tSROH_all\tSROH_100kb\tSROH_1mb\tSROH_1500kb\tSROH_5mb\tmin\tQ1\tmedian\tQ3\tmax\tn50\n')
+        for sample_id in roh_region_dict.keys():
+            sorted_list = sorted(roh_region_length_dict[sample_id])
+            num_stat = len(sorted_list)
+            min_stat = min(sorted_list)
+            Q1_stat = sorted_list[-int(len(sorted_list)*0.75)]
+            median_stat = sorted_list[-int(len(sorted_list)*0.5)]
+            Q3_stat = sorted_list[-int(len(sorted_list)*0.25)]
+            max_stat = max(sorted_list)
+            n50 = calculate_N50(sorted_list)
+            SROH_stats = calculate_SROH(sorted_list,options.regionLength)
+            print(sample_id)
+            distribution_file.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(sample_id, num_stat, SROH_stats[0], SROH_stats[1], SROH_stats[2], SROH_stats[3], SROH_stats[4], min_stat, Q1_stat, median_stat, Q3_stat, max_stat, n50))
         
     
      
