@@ -27,6 +27,8 @@ def parse_args():
         help='Input 1st roh distribution filepath.')
     parser.add_argument('-j', '--inROHdistB', type=str,
         help='Input 2nd roh distribution filepath.')
+    parser.add_argument('-l', '--regionLength', type=int,
+        help='Input length of region used in calculating SROH.')
     parser.add_argument('-o', '--outReport', type=str,
         help='Output plot filename.')
 
@@ -42,13 +44,13 @@ def main(args):
         for line in roh_file_a:
             if 'sample_id' in line: continue
             parsed_line = line.strip().split('\t')
-            roh_distribution_dict['Froh'].extend([float(parsed_line[2]),float(parsed_line[3]),float(parsed_line[4]),float(parsed_line[5]),float(parsed_line[6])])
+            roh_distribution_dict['SROH'].extend([float(parsed_line[2]),float(parsed_line[3]),float(parsed_line[4]),float(parsed_line[5]),float(parsed_line[6])])
             roh_distribution_dict['SROH_length'].extend(['all','100kb','1mb', '1500kb', '5mb'])
             roh_distribution_dict['group'].extend(['No']*5)
         for line in roh_file_b:
             if 'sample_id' in line: continue
             parsed_line = line.strip().split('\t')
-            roh_distribution_dict['Froh'].extend([float(parsed_line[2]),float(parsed_line[3]),float(parsed_line[4]),float(parsed_line[5]),float(parsed_line[6])])
+            roh_distribution_dict['SROH'].extend([float(parsed_line[2]),float(parsed_line[3]),float(parsed_line[4]),float(parsed_line[5]),float(parsed_line[6])])
             roh_distribution_dict['SROH_length'].extend(['all','100kb','1mb', '1500kb', '5mb'])
             roh_distribution_dict['group'].extend(['Yes']*5)
     
@@ -58,7 +60,7 @@ def main(args):
     fig, axes = plt.subplots(figsize=(10, 10)) 
     order=["all", "100kb", "1mb", "1500kb", "5mb"]
     sns.boxplot(
-        x="SROH_length", y="Froh", hue="group", data=violin_df, 
+        x="SROH_length", y="SROH", hue="group", data=violin_df, 
         order=order,
         ax=axes
     )

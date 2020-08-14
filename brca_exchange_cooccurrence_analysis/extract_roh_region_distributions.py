@@ -68,13 +68,13 @@ def calculate_SROH(list_of_lengths,region_length):
         if length >= 5000000:
             sum_5mb += length
     
-    SROH_all = float(sum_all)/float(region_length)
-    SROH_100kb = float(sum_100kb)/float(region_length)
-    SROH_1mb = float(sum_1mb)/float(region_length)
-    SROH_1500kb = float(sum_1500kb)/float(region_length)
-    SROH_5mb = float(sum_5mb)/float(region_length)
+    FROH_all = float(sum_all)/float(region_length)
+    FROH_100kb = float(sum_100kb)/float(region_length)
+    FROH_1mb = float(sum_1mb)/float(region_length)
+    FROH_1500kb = float(sum_1500kb)/float(region_length)
+    FROH_5mb = float(sum_5mb)/float(region_length)
     
-    return [SROH_all,SROH_100kb,SROH_1mb,SROH_1500kb,SROH_5mb]
+    return [sum_all,sum_100kb,sum_1mb,sum_1500kb,sum_5mb,FROH_all,FROH_100kb,FROH_1mb,FROH_1500kb,FROH_5mb]
     
 def main(args):
 
