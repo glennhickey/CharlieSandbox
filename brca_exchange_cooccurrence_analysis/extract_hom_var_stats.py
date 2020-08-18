@@ -36,24 +36,38 @@ def main(args):
     hom_var_dict = defaultdict(int)
     het_dict = defaultdict(int)
     hom_ref_dict = defaultdict(int)
+    hom_var_af_dict = defaultdict(list)
+    het_af_dict = defaultdict(list)
+    hom_ref_af_dict = defaultdict(list)
     
     for record in vcf_reader:
         for call in record.get_hom_alts():
             if not hom_var_dict[call.sample]: hom_var_dict[call.sample] = 0
             hom_var_dict[call.sample] += 1
+            hom_var_af_dict[call.sample].append(record.INFO['AF'][0])
         for call in record.get_hets():
             if not het_dict[call.sample]: het_dict[call.sample] = 0
             het_dict[call.sample] += 1
+            het_af_dict[call.sample].append(record.INFO['AF'][0])
         for call in record.get_hom_refs():
             if not hom_ref_dict[call.sample]: hom_ref_dict[call.sample] = 0
             hom_ref_dict[call.sample] += 1
+            hom_ref_af_dict[call.sample].append(record.INFO['AF'][0])
     
     hom_vus_list = defaultdict(int)
+    hom_vus_af_list = defaultdict(int)
     with open(options.inHOMALT, 'r') as homalt_file:
         for line in homalt_file:
             if 'VUS_1|1' in line.split('\t')[1]:
-                hom_vus_list[line.split('\t')[0]] = len(ast.literal_eval(line.split('\t')[2]))
-     
+                sample_id = line.split('\t')[0]
+                variant_list = ast.literal_eval(line.split('\t')[2])
+                hom_vus_list[sample_id] = len(variant_list)
+                for variant in variant_list:
+                    variant_af = variant.split('_')[4]
+                    hom_vus_af_list[sample_id].append(variant_af)
+    
+    import pdb; pdb.set_trace()
+    
     # Compile and output report
     num_samples = len(hom_var_dict)
     min_genotypes = min(hom_var_dict.values())
@@ -124,7 +138,6 @@ def main(args):
     ax4.set_ylabel('heterozygous counts')
     fig4.savefig("hom_non_VUS_het_counts_scatter.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig4)
-    import pdb; pdb.set_trace()
      
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

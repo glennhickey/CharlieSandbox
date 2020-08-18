@@ -37,7 +37,7 @@ def main(args):
     vus_list = set()
     with open(options.inHOMALT, 'r') as homalt_file:
         for line in homalt_file:
-            if 'VUS_1|1' in line.split('\t')[1]:
+            if 'VUS_1|1' in line.split('\t')[1] or 'VUS_1|0' in line.split('\t')[1] or 'VUS_0|1' in line.split('\t')[1]:
                 for vus_variant in ast.literal_eval(line.split('\t')[2]):
                     vus_list.update([vus_variant])
     
@@ -96,7 +96,7 @@ def main(args):
     fig1, ax1 = matplotlib.pyplot.subplots()
     ax1.scatter(x_list, y_list, s=2, color=c_list)
     ax1.set_xlabel('Major Allele Frequency')
-    ax1.set_ylabel('Density')
+    ax1.set_ylabel('Genotype Frequency')
     fig1.savefig("hom_vus_HWE_AF_distributions.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig1)
     x_list = list()
@@ -117,7 +117,7 @@ def main(args):
     fig2, ax2 = matplotlib.pyplot.subplots()
     ax2.scatter(x_list, y_list, s=2, color=c_list)
     ax2.set_xlabel('Major Allele Frequency')
-    ax2.set_ylabel('Density')
+    ax2.set_ylabel('Genotype Frequency')
     fig2.savefig("non_hom_vus_HWE_AF_distributions.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig2)
     x_list = list()
@@ -138,31 +138,44 @@ def main(args):
     fig3, ax3 = matplotlib.pyplot.subplots()
     ax3.scatter(x_list, y_list, s=2, color=c_list)
     ax3.set_xlabel('Major Allele Frequency')
-    ax3.set_ylabel('Density')
+    ax3.set_ylabel('Genotype Frequency')
     fig3.savefig("all_HWE_AF_distributions.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig3)
    
     # Plot allele frequency histograms
     fig4, ax4 = matplotlib.pyplot.subplots()
-    ax4.hist(vus_maf_dist, bins=50)
-    ax4.set_title("Hom VUS Minor Allele Frequency Distributions")
+    ax4.hist(vus_maf_dist, bins=100)
+    ax4.set_title("VUS Minor Allele Frequency Distributions")
     matplotlib.pyplot.xscale('linear')
-    fig4.savefig("hom_vus_maf_dist.raw_AF.{}.png".format(options.outReport))
+    fig4.savefig("all_vus_maf_dist.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig4)
     fig5, ax5 = matplotlib.pyplot.subplots()
-    ax5.hist(non_vus_maf_dist, bins=50)
-    ax5.set_title("Non Hom VUS Minor Allele Frequency Distributions")
+    ax5.hist(non_vus_maf_dist, bins=100)
+    ax5.set_title("Non VUS Minor Allele Frequency Distributions")
     matplotlib.pyplot.xscale('linear')
-    fig5.savefig("non_hom_vus_maf_dist.raw_AF.{}.png".format(options.outReport))
+    fig5.savefig("non_vus_maf_dist.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig5)
     fig6, ax6 = matplotlib.pyplot.subplots()
-    ax6.hist(all_maf_dist, bins=50)
+    ax6.hist(all_maf_dist, bins=100)
     ax6.set_title("All Minor Allele Frequency Distributions")
     matplotlib.pyplot.xscale('linear')
     fig6.savefig("all_maf_dist.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig6)
     import pdb; pdb.set_trace()
-
+    
+    vus_maf_max1percent_dist = list()
+    for variant in vus_maf_dist:
+        if float(variant) <= 0.01:
+            vus_maf_max1percent_dist.append(variant)
+    fig7, ax7 = matplotlib.pyplot.subplots()
+    logbins = np.geomspace(0.0000000000000000000000000000001, vus_maf_max1percent_dist.max(), 100)
+    ax3.hist(minor_allele_freqs, bins=logbins)
+    ax7.hist(vus_maf_max1percent_dist, bins=logbins)
+    ax7.set_title("1 percent max maf VUS Minor Allele Frequency Distributions")
+    matplotlib.pyplot.xscale('log')
+    fig7.savefig("max1percent_vus_maf_dist.raw_AF.{}.png".format(options.outReport))
+    matplotlib.pyplot.close(fig4)
+        
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
 
