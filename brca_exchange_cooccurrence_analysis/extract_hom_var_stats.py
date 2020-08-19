@@ -55,7 +55,7 @@ def main(args):
             hom_ref_af_dict[call.sample].append(record.INFO['AF'][0])
     
     hom_vus_list = defaultdict(int)
-    hom_vus_af_list = defaultdict(int)
+    hom_vus_af_list = defaultdict(list)
     with open(options.inHOMALT, 'r') as homalt_file:
         for line in homalt_file:
             if 'VUS_1|1' in line.split('\t')[1]:
