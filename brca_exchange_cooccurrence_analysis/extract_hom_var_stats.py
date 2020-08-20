@@ -138,6 +138,31 @@ def main(args):
     ax4.set_ylabel('heterozygous counts')
     fig4.savefig("hom_non_VUS_het_counts_scatter.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig4)
+
+    x_list = list()
+    y_list = list()
+    c_list = list()
+    s_list = list()
+    for sample in hom_var_dict.keys():
+        x_list.append(hom_var_dict[sample])
+        y_list.append(het_dict[sample])
+        if hom_vus_list[sample] > 0:
+            if min([float(x) for x in hom_vus_af_list[sample]]) <= 0.01:
+                c_list.append('g')
+                s_list.append(8)
+            else:
+                c_list.append('b')
+                s_list.append(2)
+        else:
+            c_list.append('r')
+            s_list.append(2)
+    fig5, ax5 = matplotlib.pyplot.subplots()
+    ax5.scatter(x_list, y_list, s=s_list, color=c_list)
+    ax5.set_title("Homozygous alt Counts to Heterozygous Counts")
+    ax5.set_xlabel('homozygous alt counts')
+    ax5.set_ylabel('heterozygous counts')
+    fig5.savefig("hom_all_het_counts_scatter.{}.png".format(options.outReport))
+    matplotlib.pyplot.close(fig5)
      
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
