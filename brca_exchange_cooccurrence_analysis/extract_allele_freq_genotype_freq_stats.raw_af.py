@@ -97,6 +97,7 @@ def main(args):
     ax1.scatter(x_list, y_list, s=2, color=c_list)
     ax1.set_xlabel('Major Allele Frequency')
     ax1.set_ylabel('Genotype Frequency')
+    matplotlib.pyplot.xticks([0.0,0.2,0.4,0.6,0.8,1.0])
     fig1.savefig("all_vus_HWE_AF_distributions.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig1)
     x_list = list()
@@ -118,6 +119,7 @@ def main(args):
     ax2.scatter(x_list, y_list, s=2, color=c_list)
     ax2.set_xlabel('Major Allele Frequency')
     ax2.set_ylabel('Genotype Frequency')
+    matplotlib.pyplot.xticks([0.0,0.2,0.4,0.6,0.8,1.0])
     fig2.savefig("non_vus_HWE_AF_distributions.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig2)
     x_list = list()
@@ -139,6 +141,7 @@ def main(args):
     ax3.scatter(x_list, y_list, s=2, color=c_list)
     ax3.set_xlabel('Major Allele Frequency')
     ax3.set_ylabel('Genotype Frequency')
+    matplotlib.pyplot.xticks([0.0,0.2,0.4,0.6,0.8,1.0])
     fig3.savefig("all_HWE_AF_distributions.raw_AF.{}.png".format(options.outReport))
     matplotlib.pyplot.close(fig3)
    

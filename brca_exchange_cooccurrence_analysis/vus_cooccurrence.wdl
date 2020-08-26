@@ -4,8 +4,8 @@ workflow vus_cooccurrence {
     input {
         File SAMPLE_BCF
         File SAMPLE_BCF_INDEX
-        File SITES_VCF
-        File SITES_VCF_INDEX
+        File? SITES_VCF
+        File? SITES_VCF_INDEX
         String OUTPUT_NAME
         String GENE
     }
@@ -318,10 +318,14 @@ task detect_vus_benign {
         File in_intersect_vus_vcf_index
         File in_intersect_path_vcf
         File in_intersect_path_vcf_index
-        File in_sites_vcf
-        File in_sites_vcf_index
+        File? in_sites_vcf
+        File? in_sites_vcf_index
         String outname
     }
+    
+    Boolean in_sites_vcf_available = defined(in_sites_vcf)
+    Boolean in_sites_vcf_index_available = defined(in_sites_vcf_index)
+    
     command <<<
         set -exu -o pipefail
         
@@ -329,16 +333,23 @@ task detect_vus_benign {
         ln -s ~{in_intersect_vus_vcf_index} vus.vcf.gz.tbi
         ln -s ~{in_intersect_path_vcf} path.vcf.gz
         ln -s ~{in_intersect_path_vcf_index} path.vcf.gz.tbi
-        ln -s ~{in_sites_vcf} sites.vcf.gz
-        ln -s ~{in_sites_vcf_index} sites.vcf.gz.tbi
-        
-        python3 /usr/src/app/detect_vus_benign.py \
-            -i vus.vcf.gz \
-            -j path.vcf.gz \
-            -s sites.vcf.gz \
-            -o ~{outname}.cooccurrence_report.txt \
-            -v ~{outname}.apperent_benign_vus_list.vcf
-        
+        if [[ ~{in_sites_vcf_available} == true && ~{in_sites_vcf_index_available} == true ]]; then
+            ln -s ~{in_sites_vcf} sites.vcf.gz
+            ln -s ~{in_sites_vcf_index} sites.vcf.gz.tbi
+            python3 /usr/src/app/detect_vus_benign.py \
+                -i vus.vcf.gz \
+                -j path.vcf.gz \
+                -s sites.vcf.gz \
+                -o ~{outname}.cooccurrence_report.txt \
+                -v ~{outname}.apperent_benign_vus_list.vcf
+        else
+            python3 /usr/src/app/detect_vus_benign.py \
+                -i vus.vcf.gz \
+                -j path.vcf.gz \
+                -o ~{outname}.cooccurrence_report.txt \
+                -v ~{outname}.apperent_benign_vus_list.vcf
+        fi
+    
         vcf-sort -p 8 ~{outname}.apperent_benign_vus_list.vcf > ~{outname}.apperent_benign_vus_list.sorted.vcf
         bgzip ~{outname}.apperent_benign_vus_list.sorted.vcf
         tabix -p vcf ~{outname}.apperent_benign_vus_list.sorted.vcf.gz
