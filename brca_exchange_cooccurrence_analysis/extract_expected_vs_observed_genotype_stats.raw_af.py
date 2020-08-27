@@ -14,6 +14,8 @@ def parse_args():
         help='Input vcf filepath.')
     parser.add_argument('-v', '--inHOMALT', type=str,
         help='Input list of samples that contain at least 1 homozygous alt VUS genotype.')
+    parser.add_argument('-a', '--afTYPE', type=str, default="af",
+        help='Specify which minor allele frequency to use: "raw" for AF computed from observed genotypes in the vcf, "af" for the AF value in INFO field of the input VCF, "hwe" for the HWEAF_P INFO field values of the input VCF (default: "af").')
 
     options = parser.parse_args()
     return options
@@ -48,7 +50,12 @@ def main(args):
         hom_alt_frequency = float(num_hom_alts)/float(total_genotypes)
         het_frequency = float(num_hets)/float(total_genotypes)
         minor_allele_count = (num_hom_alts*2) + num_hets
-        minor_af = float(minor_allele_count)/float((total_genotypes*2))
+        if options.afTYPE == "raw":
+            minor_af = float(minor_allele_count)/float((total_genotypes*2))
+        elif options.afTYPE == "af":
+            minor_af = float(record.INFO['AF'][0])
+        elif options.afTYPE == "hwe":
+            minor_af = float(record.INFO['HWEAF_P'][0])
         variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],record.INFO['AF'][0])
         all_variant_hom_genotype_count[variant_record] = (num_hom_alts, minor_af)
         if variant_record in vus_list:
