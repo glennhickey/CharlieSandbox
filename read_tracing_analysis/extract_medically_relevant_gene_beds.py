@@ -23,17 +23,14 @@ def parse_args():
     """
 
     parser = argparse.ArgumentParser(prog='read-tracer', description= __doc__)
-    parser.add_argument('-a', '--in_bamFile1', type=str,
-        help="Input test BAM file sorted by read name via 'samtools -n'")
-    parser.add_argument('-b', '--in_bamFile2', type=str,
-        help="Input baseline BAM file sorted by read name via 'samtools -n'")
+    parser.add_argument('-n', '--in_gene_csv', type=str,
+        help="Input NGS-level gene list CSV file")
+    parser.add_argument('-e', '--in_exon_csv', type=str,
+        help="Input NGS-level exon list CSV file")
     parser.add_argument('-o','--out_filtered_moved_pos_BAM', type=str, 
         help="Output BAM file that will contain reads from the test BAM that satisfy position movement and map quality difference criterias.")
     parser.add_argument('-i','--out_filtered_initial_pos_BAM', type=str, 
         help="Output BAM file that will contain reads from the baseline BAM that satisfy position movement and map quality difference criterias.")
-    parser.add_argument('-p','--out_read_pos_diff', type=argparse.FileType('wb'), default=sys.stdout,
-        help= "Output tab-delimited list of records in the form of: \
-             READNAME'\t'CHROMOSOME POSITION OF READ IN BAMFILE 1'\t'BAMFILE 1 READ QUAL SCORE'\t'CHROMOSOME POSITION OF READ IN BAMFILE 2'\t'BAMFILE 2 READ QUAL SCORE.")
     parser.add_argument('-d','--pos_diff_thresh', type=int, default=150,
         help= "Threshold of read position difference of a read between two BAM files.")
     parser.add_argument('-m','--mapq_diff_thresh', type=int, default=0,
@@ -50,19 +47,13 @@ def main(args):
     # Cycle through read records in each BAM file and extract reads that share the same name and which pair that read is
     #   and filter for reads that have position that either is in a different reference contig or a different position
     #   a different position that's >= 'diff_thresh' within the same reference contig
-    print('loading bam files...')
-    bamfile_1 = pysam.AlignmentFile(options.in_bamFile1, "r")
-    bamfile_2 = pysam.AlignmentFile(options.in_bamFile2, "r")
-    bamfile_diff_filtered = pysam.AlignmentFile(options.out_filtered_moved_pos_BAM, "w", template=bamfile_1)
-    bamfile_inital_pos_filtered = pysam.AlignmentFile(options.out_filtered_initial_pos_BAM, "w", template=bamfile_2)
-    print('FINISHED loading bam files...')
+    bamfile_1 = pysam.AlignmentFile(options.in_bamFile1, "rb")
+    bamfile_2 = pysam.AlignmentFile(options.in_bamFile2, "rb")
+    bamfile_diff_filtered = pysam.AlignmentFile(options.out_filtered_moved_pos_BAM, "wb", template=bamfile_1)
+    bamfile_inital_pos_filtered = pysam.AlignmentFile(options.out_filtered_initial_pos_BAM, "wb", template=bamfile_2)
     
     for read1 in bamfile_1:
         read1_name = ""
-        print(read1)
-        print(read1.query_name)
-        print(read1.is_read1)
-        print(read1.is_read2)
         if "_1" in read1.query_name.strip() or "/1" in read1.query_name.strip() or read1.is_read1:
             read1_name = "{}/1".format(read1.query_name.strip().strip('_1').strip('/1'))
         elif "_2" in read1.query_name.strip() or "/2" in read1.query_name.strip() or read1.is_read2:
@@ -72,7 +63,6 @@ def main(args):
             continue
         read2_name = "!"
         read1_chr_position = (read1.reference_id, read1.reference_start)
-        print(read2_name)
         while read2_name != read1_name:
             print('read1_name: {}'.format(read1_name))
             print('read2_name: {}'.format(read2_name))
