@@ -59,10 +59,6 @@ def main(args):
     
     for read1 in bamfile_1:
         read1_name = ""
-        print(read1)
-        print(read1.query_name)
-        print(read1.is_read1)
-        print(read1.is_read2)
         if "_1" in read1.query_name.strip() or "/1" in read1.query_name.strip() or read1.is_read1:
             read1_name = "{}/1".format(read1.query_name.strip().strip('_1').strip('/1'))
         elif "_2" in read1.query_name.strip() or "/2" in read1.query_name.strip() or read1.is_read2:
@@ -72,18 +68,19 @@ def main(args):
             continue
         read2_name = "!"
         read1_chr_position = (read1.reference_id, read1.reference_start)
-        print(read2_name)
         while read2_name != read1_name:
-            print('read1_name: {}'.format(read1_name))
-            print('read2_name: {}'.format(read2_name))
             if read1_name > read2_name:
                 read2 = bamfile_2.next()
             if "_1" in read2.query_name.strip() or "/1" in read2.query_name.strip() or read2.is_read1:
                 read2_name = "{}/1".format(read2.query_name.strip().strip('_1').strip('/1'))
             elif "_2" in read2.query_name.strip() or "/2" in read2.query_name.strip() or read2.is_read2:
                 read2_name = "{}/2".format(read2.query_name.strip().strip('_2').strip('/2'))
+
             print('read1_name: {}'.format(read1_name))
             print('read2_name: {}'.format(read2_name))
+            if read2_name == "HISEQ1:22:H9UJNADXX:1:1101:1189:997/1":
+                print('FOUND READ 2')
+                sys.exit(1)
             
             if read2_name == read1_name:
                 read2_chr_position = (read2.reference_id, read2.reference_start)
@@ -94,6 +91,12 @@ def main(args):
                             bamfile_diff_filtered.write(read1)
                             bamfile_inital_pos_filtered.write(read2)
                     break
+            elif read1_name < read2_name:
+                # Read 1 is not in bam2 read list. Proceed to the next read
+                print('Read from bam 1 is missing from bam 2')
+                print('Read_1: {}'.format(read1_name))
+                print('Read_2 boundary: {}'.format(read2_name))
+                break
      
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
