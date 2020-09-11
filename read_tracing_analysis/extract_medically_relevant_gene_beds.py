@@ -47,11 +47,15 @@ def main(args):
             gene_name = line[0]
             if gene_name == 'gene': continue
             print(line)
-            association_level = int(line[13])
+            if line[13] == '':
+                association_level = 0
+            else:
+                association_level = int(line[13])
             if association_level is None: association_level = 0
             if association_level >= options.in_association_level:
                 gene_list_association_level_list.append(gene_name)
-        
+    
+    print(len(gene_list_association_level_list))
     with open(options.in_exon_csv, 'r') as exon_list_csv, open(options.out_bed_file, 'w') as output_bed_file:
         exon_list_csv_reader = csv.reader(exon_list_csv, delimiter=',', quotechar='"')
         for line in exon_list_csv_reader:

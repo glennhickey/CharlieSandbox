@@ -58,6 +58,8 @@ def main(args):
     print('FINISHED loading bam files...')
     
     for read1 in bamfile_1:
+        if read1.is_unmapped:
+            continue
         read1_name = ""
         if "_1" in read1.query_name.strip() or "/1" in read1.query_name.strip() or read1.is_read1:
             read1_name = "{}/1".format(read1.query_name.strip().strip('_1').strip('/1'))
@@ -75,18 +77,14 @@ def main(args):
                 read2_name = "{}/1".format(read2.query_name.strip().strip('_1').strip('/1'))
             elif "_2" in read2.query_name.strip() or "/2" in read2.query_name.strip() or read2.is_read2:
                 read2_name = "{}/2".format(read2.query_name.strip().strip('_2').strip('/2'))
-
+            
             print('read1_name: {}'.format(read1_name))
             print('read2_name: {}'.format(read2_name))
-            if read2_name == "HISEQ1:22:H9UJNADXX:1:1101:1189:997/1":
-                print('FOUND READ 2')
-                sys.exit(1)
-            
             if read2_name == read1_name:
                 read2_chr_position = (read2.reference_id, read2.reference_start)
                 if read2_chr_position != read1_chr_position:
                     if (read1_chr_position[0] != read2_chr_position[0]) or abs(int(read1_chr_position[1])-int(read2_chr_position[1])) >= options.pos_diff_thresh:
-                        print("{}\t{}:{}\t{}\t{}:{}\t{}\n".format(read1_name,read1_chr_position[0],read1_chr_position[1],read1.mapping_quality,read2_chr_position[0],read2_chr_position[1],read2.mapping_quality), file=options.out_read_pos_diff)
+                        print("{}\t{}:{}\t{}\t{}:{}\t{}\n".format(read1_name, read1_chr_position[0], read1_chr_position[1], read1.mapping_quality, read2_chr_position[0], read2_chr_position[1], read2.mapping_quality), file=options.out_read_pos_diff)
                         if abs(int(read1.mapping_quality) - int(read2.mapping_quality)) >= options.mapq_diff_thresh:
                             bamfile_diff_filtered.write(read1)
                             bamfile_inital_pos_filtered.write(read2)
