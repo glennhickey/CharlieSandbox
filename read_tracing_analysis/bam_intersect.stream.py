@@ -13,6 +13,8 @@ from __future__ import print_function
 import argparse
 import sys
 import pysam
+from collections import defaultdict
+import pdb
 
 def parse_args():
     """
@@ -57,46 +59,26 @@ def main(args):
     bamfile_inital_pos_filtered = pysam.AlignmentFile(options.out_filtered_initial_pos_BAM, "w", template=bamfile_2)
     print('FINISHED loading bam files...')
     
+    read1_dict = defaultdict(int)
+    read2_dict = defaultdict(int)
+    bam1_record_dict = defaultdict()
+    bam2_record_dict = defaultdict()
     for read1 in bamfile_1:
-        if read1.is_unmapped:
-            continue
-        read1_name = ""
-        if "_1" in read1.query_name.strip() or "/1" in read1.query_name.strip() or read1.is_read1:
-            read1_name = "{}/1".format(read1.query_name.strip().split('_1')[0].split('/1')[0])
-        elif "_2" in read1.query_name.strip() or "/2" in read1.query_name.strip() or read1.is_read2:
-            read1_name = "{}/2".format(read1.query_name.strip().split('_2')[0].split('/2')[0])
-        else:
-            # Read is likely unmapped and therefore wont be informative
-            continue
-        read2_name = "!"
-        read1_chr_position = (read1.reference_id, read1.reference_start)
-        print('read1_name: {}'.format(read1_name))
-        while read2_name != read1_name:
-            if read1_name > read2_name:
-                read2 = bamfile_2.next()
-            if "_1" in read2.query_name.strip() or "/1" in read2.query_name.strip() or read2.is_read1:
-                read2_name = "{}/1".format(read2.query_name.strip().split('_1')[0].split('/1')[0])
-            elif "_2" in read2.query_name.strip() or "/2" in read2.query_name.strip() or read2.is_read2:
-                read2_name = "{}/2".format(read2.query_name.strip().split('_2')[0].split('/2')[0])
+        read1_record = "{}_{}".format(read1.query_name,read1.query_sequence)
+        read1_dict[read1_record] = int(read1.reference_start)
+        bam1_record_dict[read1_record] = read1
+    
+    for read2 in bamfile_2:
+        read2_record = "{}_{}".format(read2.query_name,read2.query_sequence)
+        read2_dict[read2_record] = int(read2.reference_start)
+        bam2_record_dict[read2_record] = read2
+        
+    bam_intersection_list = list(set(read1_dict.keys()).intersection(set(read2_dict.keys())))
+    for read in bam_intersection_list:
+        if read1_dict[read] != read2_dict[read]:
+            bamfile_diff_filtered.write(bam1_record_dict[read])
+            bamfile_inital_pos_filtered.write(bam2_record_dict[read])
             
-            print('read1_name: {}'.format(read1_name))
-            print('read2_name: {}'.format(read2_name))
-            if read2_name == read1_name:
-                read2_chr_position = (read2.reference_id, read2.reference_start)
-                if read2_chr_position != read1_chr_position:
-                    if (read1_chr_position[0] != read2_chr_position[0]) or abs(int(read1_chr_position[1])-int(read2_chr_position[1])) >= options.pos_diff_thresh:
-                        print("{}\t{}:{}\t{}\t{}:{}\t{}\n".format(read1_name, read1_chr_position[0], read1_chr_position[1], read1.mapping_quality, read2_chr_position[0], read2_chr_position[1], read2.mapping_quality), file=options.out_read_pos_diff)
-                        if abs(int(read1.mapping_quality) - int(read2.mapping_quality)) >= options.mapq_diff_thresh:
-                            bamfile_diff_filtered.write(read1)
-                            bamfile_inital_pos_filtered.write(read2)
-                    break
-            elif read1_name < read2_name:
-                # Read 1 is not in bam2 read list. Proceed to the next read
-                print('Read from bam 1 is missing from bam 2')
-                print('Read_1: {}'.format(read1_name))
-                print('Read_2 boundary: {}'.format(read2_name))
-                break
-     
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
 
