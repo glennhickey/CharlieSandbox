@@ -55,12 +55,14 @@ workflow generate_igv_screenshots {
 
         # note: keep these as strings to avoid localizing large cram files (GATK will stream from bucket)
         String pb_cram = read_table.out[i][3]
-
+        String pb_crai = read_table.out[i][4]
+        
         call generate_mini_crams {
             input:
                 var_id = var_ids,
                 region = regions,
                 pb_cram = pb_cram,
+                pb_crai = pb_crai,
                 ref_fasta = ref_fasta,
                 ref_fasta_index = ref_fasta_index,
                 ref_fasta_dict = ref_fasta_dict
@@ -131,15 +133,13 @@ task generate_mini_crams {
 
         String region
         
-        String pb_cram
-
+        File pb_cram
+        File pb_crai
         File ref_fasta
         File ref_fasta_index
         File ref_fasta_dict
 
         Int disk_size = 50
-
-        String project_id  # test if this google project ID works
 
     }
     #String region_list = `echo ~{region} | tr , \\n`
@@ -150,7 +150,7 @@ task generate_mini_crams {
         echo ~{region} | tr , \\n > tmp.region.list
 
         ## how to set project for --gcs-project-for-requester-pays option??
-        gatk PrintReads -I ~{pb_cram} -L tmp.region.list -O "pb_wes.bam" -R ~{ref_fasta} --gcs-project-for-requester-pays ~{project_id}
+        gatk PrintReads --disable-tool-default-read-filters -I ~{pb_cram} --read-index ~{pb_crai} -L tmp.region.list -O "pb_wes.bam" -R ~{ref_fasta}
     >>>
 
     runtime {

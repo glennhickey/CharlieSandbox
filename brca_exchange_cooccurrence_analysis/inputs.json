@@ -1,0 +1,8 @@
+{
+  "generate_igv_screenshots.batch_script": "/data/markellocj/test_igv_wdl/make_igv_batchfile.py",
+  "generate_igv_screenshots.input_table": "/data/markellocj/test_igv_wdl/table.tsv",
+  "generate_igv_screenshots.ref_fasta": "/data/markellocj/test_igv_wdl/GCA_000001405.15_GRCh38_no_alt_plus_hs38d1_analysis_set.fna",
+  "generate_igv_screenshots.ref_fasta_index": "/data/markellocj/test_igv_wdl/GCA_000001405.15_GRCh38_no_alt_plus_hs38d1_analysis_set.fna.fai",
+  "generate_igv_screenshots.ref_fasta_dict": "/data/markellocj/test_igv_wdl/GCA_000001405.15_GRCh38_no_alt_plus_hs38d1_analysis_set.dict",
+  "generate_igv_screenshots.output_folder_prefix": "test_igv_output"
+}
