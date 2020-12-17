@@ -4,13 +4,13 @@
 2) Download the .ipynb from [here](https://github.com/cmarkello/Sandbox/blob/master/brca_exchange_cooccurrence_analysis/igv_terra_stuff/IGV_WDL_Terra_setup.ipynb).
 3) Upload `IGV_WDL_Terra_setup.ipynb` to the `NOTEBOOKS` tab in the Terra workspace
 4) Create a table.tsv tab-delimited file like the example provided [here](https://github.com/cmarkello/Sandbox/blob/master/brca_exchange_cooccurrence_analysis/igv_terra_stuff/table.tsv) and add your data in the following way for each row:
-{TOPMED_SAMPLE_ID}\t{VARIANT_POSITION}\t{VARIANT_RANGE}
+`{TOPMED_SAMPLE_ID}\t{VARIANT_POSITION}\t{VARIANT_RANGE}`
 where:
   - TOPMED_SAMPLE_ID: The TOPMed ID of the sample. Starts with an NWD prefix
-  - VARIANT_POSITION: The position and definition of the variant of interest. Formatted as {VARIANT_CHR}:{VARIANT_POS}:{VARIANT_REF}:{VARIANT_ALT}
-  - VARIANT_RANGE: The range of the variant to render in igv. Formatted as {VARIANT_CHR}:{POSITION_START}-{POSITION_END}
+  - VARIANT_POSITION: The position and definition of the variant of interest. Formatted as `{VARIANT_CHR}:{VARIANT_POS}:{VARIANT_REF}:{VARIANT_ALT}`
+  - VARIANT_RANGE: The range of the variant to render in igv. Formatted as `{VARIANT_CHR}:{POSITION_START}-{POSITION_END}`
 
-5) Upload your modified table.tsv to the Files directory found at the bottom of the `DATA` tab directory listing in the Terra workspace.
+5) Upload your modified `table.tsv` to the Files directory found at the bottom of the `DATA` tab directory listing in the Terra workspace.
 6) Upload the igv batch script formatting script from [here](https://github.com/cmarkello/Sandbox/blob/master/brca_exchange_cooccurrence_analysis/igv_terra_stuff/make_igv_batchfile.py) to the Files directory found at the bottom of the `DATA` tab directory listing in the Terra workspace.
 7) Run through the `IGV_WDL_Terra_setup.ipynb` notebook in the `NOTEBOOKS` tab in the Terra workspace.
 8) Go to the `WORKFLOWS` tab in the Terra workspace and add a new workflow, searching for `cmarkello/Sandbox` in the Dockstore repo.
