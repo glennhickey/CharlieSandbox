@@ -24,9 +24,9 @@ workflow generate_igv_screenshots {
 
         File input_table
 
-        File ref_fasta
-        File ref_fasta_index
-        File ref_fasta_dict
+        File ref_fasta = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta"
+        File ref_fasta_index = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.fasta.fai"
+        File ref_fasta_dict = "gs://gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.dict"
 
         String output_folder_prefix 
 
