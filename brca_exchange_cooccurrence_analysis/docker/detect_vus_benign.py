@@ -165,7 +165,8 @@ def main(args):
                 chisquare_value = chisquare(HWE_obs_genotype_freq,HWE_exp_genotype_freq,ddof=1)
                 #levene_haldane_hwe_calc = hl.eval(hl.hardy_weinberg_test(HWE_obs_genotype_freq[0],HWE_obs_genotype_freq[1],HWE_obs_genotype_freq[2]))
                 VUS_hom_HWE_stats[variant_record] = [HWE_obs_genotype_freq, HWE_exp_genotype_freq, p_allele_freq, q_allele_freq, chisquare_value[0], chisquare_value[1]]
-    sitesvcf_stream.close()
+    if options.inSITESvcf:
+        sitesvcf_stream.close()
     
     ## Output to hom var VUS Hardy-Weinberg Equilibrium report
     hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
