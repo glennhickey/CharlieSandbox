@@ -99,7 +99,8 @@ def main(args):
                     print('path source_record: {}_{}_{}_{}'.format(record.CHROM,record.POS,record.REF,record.ALT[0]))
             if str(float(allele_freq)) == "0.0":
                 print("Error: variant as allele frequency of 0")
-                sys.exit(1)
+                print("Bad variant: {}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],allele_freq))
+                continue
             variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],allele_freq)
             print(variant_record)
             print('')
@@ -134,7 +135,8 @@ def main(args):
                     print('vus source_record: {}_{}_{}_{}'.format(record.CHROM,record.POS,record.REF,record.ALT[0]))
             if str(float(allele_freq)) == "0.0":
                 print("Error: variant as allele frequency of 0")
-                sys.exit(1)
+                print("Bad variant: {}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],allele_freq))
+                continue
             variant_record = "{}_{}_{}_{}_{}".format(record.CHROM,record.POS,record.REF,record.ALT[0],allele_freq)
             HWE_obs_genotype_freq = list()
             HWE_exp_genotype_freq = list()
