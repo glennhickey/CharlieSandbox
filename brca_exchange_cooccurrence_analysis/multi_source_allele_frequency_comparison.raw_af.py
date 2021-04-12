@@ -87,10 +87,10 @@ def main(args):
     rare_ks_stat,rare_ks_pvalue = ks_2samp(rare_x_list, rare_y_list)
     common_ks_stat,common_ks_pvalue = ks_2samp(common_x_list, common_y_list)
     with open('AF_comparison.raw_AF.{}.ks_stats.tsv'.format(options.outReport), 'w') as ks_output:
-        ks_output.write('variant_type\tks_stat\tks_pvalue')
-        ks_output.write('total\t{}\t{}'.format(total_ks_stat,total_ks_pvalue))
-        ks_output.write('rare\t{}\t{}'.format(rare_ks_stat,rare_ks_pvalue))
-        ks_output.write('common\t{}\t{}'.format(common_ks_stat,common_ks_pvalue))
+        ks_output.write('variant_type\tsample_size\tks_stat\tks_pvalue\n')
+        ks_output.write('total\t{}\t{}\t{}\n'.format(len(x_list),total_ks_stat,total_ks_pvalue))
+        ks_output.write('rare\t{}\t{}\t{}\n'.format(len(rare_x_list),rare_ks_stat,rare_ks_pvalue))
+        ks_output.write('common\t{}\t{}\t{}\n'.format(len(common_x_list),common_ks_stat,common_ks_pvalue))
     
     if adjust_figure: pdb.set_trace()
     # Plot total variant figure
