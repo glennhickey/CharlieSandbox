@@ -8,13 +8,14 @@ workflow vus_cooccurrence {
         File? SITES_VCF_INDEX
         String OUTPUT_NAME
         String GENE
-        Boolean QC_FILTER="False"
+        Boolean QC_FILTER = false
     }
     
-    if (QC_FILTER){
+    if (QC_FILTER) {
         call hail_preprocess_qc {
-            in_sample_bcf=SAMPLE_BCF,
-            in_sample_bcf_index=SAMPLE_BCF_INDEX
+            input:
+                in_sample_bcf=SAMPLE_BCF,
+                in_sample_bcf_index=SAMPLE_BCF_INDEX
         }
     }
     call setup_brcaexchange_data {
@@ -41,10 +42,13 @@ workflow vus_cooccurrence {
             in_seq_file=setup_brcaexchange_data.ref_seq_file
     }
     
+    File preprocessed_sample_bcf = select_first([hail_preprocess_qc.hail_qc_bcf, SAMPLE_BCF])
+    File preprocessed_sample_bcf_index = select_first([hail_preprocess_qc.hail_qc_bcf_index, SAMPLE_BCF_INDEX])
+    
     call setup_sample_data {
         input:
-            in_sample_bcf=SAMPLE_BCF,
-            in_sample_bcf_index=SAMPLE_BCF_INDEX,
+            in_sample_bcf=preprocessed_sample_bcf,
+            in_sample_bcf_index=preprocessed_sample_bcf_index,
             in_gene=GENE,
             in_ref_file=setup_brcaexchange_data.reference_file,
             in_seq_file=setup_brcaexchange_data.ref_seq_file
@@ -178,47 +182,46 @@ task hail_preprocess_qc {
     command <<<
     set -exu -o pipefail
     python <<CODE
-        import hail as hl
-        vcf_outfile = bucket + 'youroutfile.vcf.bgz'
-        hl.init(default_reference = "GRCh38", log = 'Hail_QC.log')
-        recode = {f"{i}":f"chr{i}" for i in (list(range(1, 23)) + ['X', 'Y'])}
-        mt = hl.import_vcf(~{in_sample_bcf}, force_bgz = True, contig_recoding=recode, min_partitions=150)
-        mt = mt.filter_rows(hl.len(mt.filters) == 0, keep = True)
-        
-        ## sample and variant QC ##
-        # Run sample QC
-        mt = hl.sample_qc(mt)
-        # Run variant QC
-        mt = hl.variant_qc(mt)
-        # Summarize each field
-        mt.summarize()
-        
-        ## genotype QC ##
-        ab = mt.AD[1] / hl.sum(mt.AD)
-        filter_condition_ab = ((mt.GT.is_hom_ref() & (ab <= 0.1)) |
-                                (mt.GT.is_het() & (ab >= 0.25) & (ab <= 0.75)) |
-                                (mt.GT.is_hom_var() & (ab >= 0.9)))
+    import hail as hl
+    hl.init(default_reference = "GRCh38", log = 'Hail_QC.log')
+    recode = {f"{i}":f"chr{i}" for i in (list(range(1, 23)) + ['X', 'Y'])}
+    mt = hl.import_vcf("~{in_sample_bcf}", force_bgz = True, contig_recoding=recode, min_partitions=150)
+    mt = mt.filter_rows(hl.len(mt.filters) == 0, keep = True)
+    
+    ## sample and variant QC ##
+    # Run sample QC
+    mt = hl.sample_qc(mt)
+    # Run variant QC
+    mt = hl.variant_qc(mt)
+    # Summarize each field
+    mt.summarize()
+    
+    ## genotype QC ##
+    ab = mt.AD[1] / hl.sum(mt.AD)
+    filter_condition_ab = ((mt.GT.is_hom_ref() & (ab <= 0.1)) |
+                            (mt.GT.is_het() & (ab >= 0.25) & (ab <= 0.75)) |
+                            (mt.GT.is_hom_var() & (ab >= 0.9)))
 
-        fraction_filtered = mt.aggregate_entries(hl.agg.fraction(~filter_condition_ab))
-        print(f'Filtering {fraction_filtered * 100:.2f}% entries out of downstream analysis.')
-        mt = mt.filter_entries(filter_condition_ab)
-        
-        ## variant QC and filtering ##
-        mt = mt.filter_rows(hl.min(mt.variant_qc.AC) > 0)
-        mt = mt.filter_rows(mt.variant_qc.p_value_hwe > 1e-6)
-        # Bin variants by frequency
-        mt = mt.annotate_rows(frq_bin =(hl.case()
-            .when(hl.min(mt.variant_qc.AC) == 1, "singleton")
-            .when((hl.min(mt.variant_qc.AC) >= 2) & (hl.min(mt.variant_qc.AC) <= 4), "mac2_4")
-            .when((hl.min(mt.variant_qc.AC) >= 4) & (hl.min(mt.variant_qc.AC) <= 19), "mac5_19")
-            .when((hl.min(mt.variant_qc.AC) >= 20) & (hl.min(mt.variant_qc.AF) < 0.001), "mac20_maf01")
-            .when((hl.min(mt.variant_qc.AF) >= 0.001) & (hl.min(mt.variant_qc.AF) < 0.01), "maf01_maf1")
-            .when((hl.min(mt.variant_qc.AF) >= 0.01) & (hl.min(mt.variant_qc.AF) < 0.05), "maf1_5")
-            .when(hl.min(mt.variant_qc.AF) >= 0.05, "maf5")
-            .default("None")))
-        # Count the number of variants in each bin
-        mt.aggregate_rows(hl.agg.counter(mt.frq_bin))
-        hl.export_vcf(mt, "raw_sample.hail_qc.vcf")
+    fraction_filtered = mt.aggregate_entries(hl.agg.fraction(~filter_condition_ab))
+    print(f'Filtering {fraction_filtered * 100:.2f}% entries out of downstream analysis.')
+    mt = mt.filter_entries(filter_condition_ab)
+    
+    ## variant QC and filtering ##
+    mt = mt.filter_rows(hl.min(mt.variant_qc.AC) > 0)
+    mt = mt.filter_rows(mt.variant_qc.p_value_hwe > 1e-6)
+    # Bin variants by frequency
+    mt = mt.annotate_rows(frq_bin =(hl.case()
+        .when(hl.min(mt.variant_qc.AC) == 1, "singleton")
+        .when((hl.min(mt.variant_qc.AC) >= 2) & (hl.min(mt.variant_qc.AC) <= 4), "mac2_4")
+        .when((hl.min(mt.variant_qc.AC) >= 4) & (hl.min(mt.variant_qc.AC) <= 19), "mac5_19")
+        .when((hl.min(mt.variant_qc.AC) >= 20) & (hl.min(mt.variant_qc.AF) < 0.001), "mac20_maf01")
+        .when((hl.min(mt.variant_qc.AF) >= 0.001) & (hl.min(mt.variant_qc.AF) < 0.01), "maf01_maf1")
+        .when((hl.min(mt.variant_qc.AF) >= 0.01) & (hl.min(mt.variant_qc.AF) < 0.05), "maf1_5")
+        .when(hl.min(mt.variant_qc.AF) >= 0.05, "maf5")
+        .default("None")))
+    # Count the number of variants in each bin
+    mt.aggregate_rows(hl.agg.counter(mt.frq_bin))
+    hl.export_vcf(mt, "raw_sample.hail_qc.vcf")
     CODE
     bcftools view -Ou raw_sample.hail_qc.vcf > raw_sample.hail_qc.bcf
     bcftools index raw_sample.hail_qc.bcf
