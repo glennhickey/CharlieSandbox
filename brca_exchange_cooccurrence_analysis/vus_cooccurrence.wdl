@@ -181,11 +181,22 @@ task hail_preprocess_qc {
     }
     command <<<
     set -exu -o pipefail
-    python <<CODE
+    bcftools view -O v ~{in_sample_bcf} | bgzip > input.vcf.gz
+    HAIL_HOME=$(pip3 show hail | grep Location | awk -F' ' '{print $2 "/hail"}')
+    export PYSPARK_SUBMIT_ARGS="
+    --jars $HAIL_HOME/backend/hail-all-spark.jar
+    --conf spark.driver.extraClassPath="$HAIL_HOME/backend/hail-all-spark.jar"
+    --conf spark.executor.extraClassPath=./hail-all-spark.jar
+    --conf spark.serializer=org.apache.spark.serializer.KryoSerializer
+    --conf spark.kryo.registrator=is.hail.kryo.HailKryoRegistrator
+    --conf spark.driver.memory=5G
+    --conf spark.executor.memory=30G
+    pyspark-shell"
+    python3 <<CODE
     import hail as hl
     hl.init(default_reference = "GRCh38", log = 'Hail_QC.log')
     recode = {f"{i}":f"chr{i}" for i in (list(range(1, 23)) + ['X', 'Y'])}
-    mt = hl.import_vcf("~{in_sample_bcf}", force_bgz = True, contig_recoding=recode, min_partitions=150)
+    mt = hl.import_vcf("input.vcf.gz", force_bgz = True, contig_recoding=recode, min_partitions=150)
     mt = mt.filter_rows(hl.len(mt.filters) == 0, keep = True)
     
     ## sample and variant QC ##
@@ -223,7 +234,7 @@ task hail_preprocess_qc {
     mt.aggregate_rows(hl.agg.counter(mt.frq_bin))
     hl.export_vcf(mt, "raw_sample.hail_qc.vcf")
     CODE
-    bcftools view -Ou raw_sample.hail_qc.vcf > raw_sample.hail_qc.bcf
+    bcftools view -Ob raw_sample.hail_qc.vcf > raw_sample.hail_qc.bcf
     bcftools index raw_sample.hail_qc.bcf
     >>>
     output {
