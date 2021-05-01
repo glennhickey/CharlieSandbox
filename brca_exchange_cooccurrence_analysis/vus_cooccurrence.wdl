@@ -208,18 +208,19 @@ task hail_preprocess_qc {
     mt.summarize()
     
     ## genotype QC ##
-    ab = mt.AD[1] / hl.sum(mt.AD)
-    filter_condition_ab = ((mt.GT.is_hom_ref() & (ab <= 0.1)) |
-                            (mt.GT.is_het() & (ab >= 0.25) & (ab <= 0.75)) |
-                            (mt.GT.is_hom_var() & (ab >= 0.9)))
-
-    fraction_filtered = mt.aggregate_entries(hl.agg.fraction(~filter_condition_ab))
-    print(f'Filtering {fraction_filtered * 100:.2f}% entries out of downstream analysis.')
-    mt = mt.filter_entries(filter_condition_ab)
+    #ab = mt.AD[1] / hl.sum(mt.AD)
+    #filter_condition_ab = ((mt.GT.is_hom_ref() & (ab <= 0.1)) |
+    #                        (mt.GT.is_het() & (ab >= 0.25) & (ab <= 0.75)) |
+    #                        (mt.GT.is_hom_var() & (ab >= 0.9)))
+    #
+    #fraction_filtered = mt.aggregate_entries(hl.agg.fraction(~filter_condition_ab))
+    #print(f'Filtering {fraction_filtered * 100:.2f}% entries out of downstream analysis.')
+    #mt = mt.filter_entries(filter_condition_ab)
     
     ## variant QC and filtering ##
     mt = mt.filter_rows(hl.min(mt.variant_qc.AC) > 0)
-    mt = mt.filter_rows(mt.variant_qc.p_value_hwe > 1e-6)
+    #mt = mt.filter_rows(mt.variant_qc.p_value_hwe > 1e-6)
+    mt = mt.filter_rows(mt.variant_qc.p_value_hwe > 1e-2)
     # Bin variants by frequency
     mt = mt.annotate_rows(frq_bin =(hl.case()
         .when(hl.min(mt.variant_qc.AC) == 1, "singleton")
@@ -424,30 +425,30 @@ task detect_vus_benign {
                 -i vus.vcf.gz \
                 -j path.vcf.gz \
                 -s sites.vcf.gz \
-                -o ~{outname}.cooccurrence_report.txt \
-                -v ~{outname}.apperent_benign_vus_list.vcf
+                -o ~{outname}.cooccurrence_report \
+                -v ~{outname}.apparent_benign_vus_list.vcf
         else
             python3 /usr/src/app/detect_vus_benign.py \
                 -i vus.vcf.gz \
                 -j path.vcf.gz \
-                -o ~{outname}.cooccurrence_report.txt \
+                -o ~{outname}.cooccurrence_report \
                 -v ~{outname}.apperent_benign_vus_list.vcf
         fi
     
-        vcf-sort -p 8 ~{outname}.apperent_benign_vus_list.vcf > ~{outname}.apperent_benign_vus_list.sorted.vcf
-        bgzip ~{outname}.apperent_benign_vus_list.sorted.vcf
-        tabix -p vcf ~{outname}.apperent_benign_vus_list.sorted.vcf.gz
-        rm -f ~{outname}.apperent_benign_vus_list.vcf
+        vcf-sort -p 8 ~{outname}.apparent_benign_vus_list.vcf > ~{outname}.apparent_benign_vus_list.sorted.vcf
+        bgzip ~{outname}.apparent_benign_vus_list.sorted.vcf
+        tabix -p vcf ~{outname}.apparent_benign_vus_list.sorted.vcf.gz
+        rm -f ~{outname}.apparent_benign_vus_list.vcf
     >>>
     output {
         File cooccurrence_report = "~{outname}.cooccurrence_report.txt"
         File complete_cooccurrence_report = "complete_~{outname}.cooccurrence_report.txt"
         File hwe_report = "hom_vus_hwe_~{outname}.cooccurrence_report.txt"
-        File hwe_stat_hist = "hom_vus_chi_square_stat.~{outname}.png"
-        File hwe_pvalue_hist = "hom_vus_chi_square_pvalue.~{outname}.png"
-        File hwe_freq_hist = "hom_vus_allele_frequencies.~{outname}.png"
-        File apparent_benign_vus_vcf = "~{outname}.apperent_benign_vus_list.sorted.vcf.gz"
-        File apparent_benign_vus_vcf_index = "~{outname}.apperent_benign_vus_list.sorted.vcf.gz.tbi"
+        File hwe_stat_hist = "hom_vus_chi_square_stat.~{outname}.cooccurrence_report.png"
+        File hwe_pvalue_hist = "hom_vus_chi_square_pvalue.~{outname}.cooccurrence_report.png"
+        File hwe_freq_hist = "hom_vus_allele_frequencies.~{outname}.cooccurrence_report.png"
+        File apparent_benign_vus_vcf = "~{outname}.apparent_benign_vus_list.sorted.vcf.gz"
+        File apparent_benign_vus_vcf_index = "~{outname}.apparent_benign_vus_list.sorted.vcf.gz.tbi"
     }
     runtime {
         cpu: 8

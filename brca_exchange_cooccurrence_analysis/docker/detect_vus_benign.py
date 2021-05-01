@@ -7,7 +7,6 @@ import pandas as pd
 import math
 from scipy.stats import chisquare
 from collections import defaultdict
-#import hail as hl
 
 def parse_args():
     """ 
@@ -171,7 +170,7 @@ def main(args):
         sitesvcf_stream.close()
     
     ## Output to hom var VUS Hardy-Weinberg Equilibrium report
-    hwe_report_filename = "hom_vus_hwe_{}".format(options.outReport)
+    hwe_report_filename = "hom_vus_hwe_{}.txt".format(options.outReport)
     hwe_chi_square_stats = list()
     hwe_chi_square_pvalues = list()
     minor_allele_freqs = list()
@@ -313,7 +312,7 @@ def main(args):
     # Union all samples
     
     ## Output co-occurrence report
-    with open(options.outReport, 'w') as report_file:
+    with open("{}.txt".format(options.outReport), 'w') as report_file:
         report_file.write("Pathogenic variant concordance\n")
         report_file.write("\t1|0 : {}\n".format(len(brca_pathogenic_left_het_sample_set)))
         report_file.write("\t0|1 : {}\n".format(len(brca_pathogenic_right_het_sample_set)))
@@ -344,7 +343,7 @@ def main(args):
         report_file.write("Total unique apparent-benign VUS : {}\n".format(len(total_concurrent_vus_coordinates_set)))
     
     ## Output to verbose report:
-    complete_report_filename = "complete_{}".format(options.outReport)
+    complete_report_filename = "complete_{}.txt".format(options.outReport)
     with open(complete_report_filename, 'w') as complete_report_file:
         complete_report_file.write("sample_name\ttype\tapparent_benign_vus_variant\tsupporting_path_variants\n")
         # VUS variants in samples with (PATH 1|0 and VUS 0|1)
