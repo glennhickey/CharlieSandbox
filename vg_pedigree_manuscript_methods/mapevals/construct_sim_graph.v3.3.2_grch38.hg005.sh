@@ -1,17 +1,22 @@
 #!/bin/bash
 cd /data/Udpbinfo/usr/markellocj/vg_trio_methods/redo_mapevals
 module load python/3.7 singularity
-source /data/markellocj/test_vg_wdl_run/HG002_mapping_vcf_eval/toil_vg_test/toilvenv/bin/activate
+#source /data/markellocj/test_vg_wdl_run/HG002_mapping_vcf_eval/toil_vg_test/toilvenv/bin/activate
+source /data/Udpbinfo/usr/markellocj/vg_trio_methods/redo_mapevals/toilvg_construct_mapeval_venv/bin/activate
 WORK_DIR="/data/Udpbinfo/usr/markellocj/vg_trio_methods/redo_mapevals/HG005_construct_haplotype_sim_graph_workdir"
 rm -fr ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore
 rm -fr ${WORK_DIR}/tmp-vg-construct-v3.2.2_grch38_hg005
 mkdir -p ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore
 mkdir -p ${WORK_DIR}/tmp-vg-construct-v3.2.2_grch38_hg005
+export TMPDIR=${WORK_DIR}/tmp-vg-construct-v3.2.2_grch38_hg005
+export XDG_RUNTIME_DIR=""
+export TOIL_SLURM_ARGS="-t 20:00:00"
 toil clean ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-jobstore
 
 toil-vg construct \
 ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-jobstore \
 ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore \
+--setEnv PATH=$PATH \
 --batchSystem slurm \
 --container Singularity \
 --vg_docker quay.io/vgteam/vg:ci-2890-655a9622c3d60e87f14b88d943fbd8554214a975 \
