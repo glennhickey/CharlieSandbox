@@ -2,18 +2,19 @@
 cd /data/Udpbinfo/usr/markellocj/vg_trio_methods/redo_mapevals
 module load python/3.7 singularity
 #source /data/markellocj/test_vg_wdl_run/HG002_mapping_vcf_eval/toil_vg_test/toilvenv/bin/activate
-source /data/Udpbinfo/usr/markellocj/vg_trio_methods/redo_mapevals/toilvg_construct_mapeval_venv/bin/activate
+source /data/markellocj/mapeval_tools/toilvg_construct_mapeval_venv/bin/activate
 WORK_DIR="/data/Udpbinfo/usr/markellocj/vg_trio_methods/redo_mapevals/HG005_construct_haplotype_sim_graph_workdir"
-rm -fr ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore
-rm -fr ${WORK_DIR}/tmp-vg-construct-v3.2.2_grch38_hg005
-mkdir -p ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore
-mkdir -p ${WORK_DIR}/tmp-vg-construct-v3.2.2_grch38_hg005
+#rm -fr ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore
+#rm -fr ${WORK_DIR}/tmp-vg-construct-v3.2.2_grch38_hg005
+#mkdir -p ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore
+#mkdir -p ${WORK_DIR}/tmp-vg-construct-v3.2.2_grch38_hg005
 export TMPDIR=${WORK_DIR}/tmp-vg-construct-v3.2.2_grch38_hg005
 export XDG_RUNTIME_DIR=""
 export TOIL_SLURM_ARGS="-t 20:00:00"
-toil clean ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-jobstore
+#toil clean ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-jobstore
 
 toil-vg construct \
+--restart \
 ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-jobstore \
 ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore \
 --setEnv PATH=$PATH \
@@ -37,5 +38,6 @@ ${WORK_DIR}/vg-construct-v3.2.2_grch38-hg005-outstore \
 --vcf /data/markellocj/benchmark_data/HG005_cohort/HG005_HG006_HG007_triophased.vcf.gz \
 --vcf_phasing /data/markellocj/benchmark_data/HG005_cohort/HG005_HG006_HG007_triophased.vcf.gz \
 --statePollingWait 120 \
---rescueJobsFrequency 120
+--rescueJobsFrequency 120 \
+--defaultMemory 100Gi
 
