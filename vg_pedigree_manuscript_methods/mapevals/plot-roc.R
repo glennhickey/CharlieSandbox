@@ -153,7 +153,7 @@ dat.plot <- ggplot(dat.roc, aes( x= FPR, y = TPR, color = aligner, label=mq)) +
     theme_bw() + 
     ggtitle(title) + 
     theme(aspect.ratio=1) +
-    coord_cartesian(ylim=c(0.9745,0.996)) # (0.9745,0.996) for highconf_pe
+    coord_cartesian(ylim=c(0.955,0.995)) # (0.9745,0.996) for highconf_pe, (0.955,0.995) for conf_difficult_pe
     
 if (title != '') {
     # And a title

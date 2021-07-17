@@ -9,7 +9,8 @@ function humanize_names() {
     sed -e 's/[a-zA-Z0-9_.]*bwamem[a-zA-Z0-9_.]*/BWA/' -e 's/[a-zA-Z0-9_.]*giraffe_parental_default[a-zA-Z0-9_.]*/GiraffeParental/' -e 's/[a-zA-Z0-9_.]*giraffe_snp1kg_default[a-zA-Z0-9_.]*/Giraffe1000GP/' -e 's/[a-zA-Z0-9_.]*giraffe_primary_default[a-zA-Z0-9_.]*/GiraffePrimary/'
 }
 
-REGION="high_conf_hg002_v4.2.1_regions"
+#REGION="high_conf_hg002_v4.2.1_regions"
+REGION="all_difficult_regions_hg002_v4.2.1_regions"
 GRAPH="hg002_sample_grch38"
 READS="HG002"
 PAIRING="paired"
