@@ -137,8 +137,8 @@ dat.roc <- dat %>%
     
 # We want smart scales that know how tiny a rate of things we can care about
 total.reads <- max(dat.roc$Total)
-min.log10 <- floor(log10(1/total.reads)) # floor(log10(1/total.reads)) for default, -6 for highconf_pe
-max.log10 <- -2 # 0 for default, -2 for highconf_pe
+min.log10 <- -3.0  # floor(log10(1/total.reads)) for default, -6 for highconf_pe, -6 for conf_difficult_pe, -5 for conf_lowmap_pe, -3.7 for conf_mhc_pe, -4.5 for conf_NOSNP1KG_pe, -3.0 for conf_cmrg_pe, -3 for conf_cmrg_NOSNP1KG_pe
+max.log10 <- 0.0 # 0 for default, -2 for highconf_pe, -2 for conf_difficult_pe, -1 for conf_lowmap_pe, -1.5 for conf_mhc_pe, -0.5 for conf_NOSNP1KG_pe, -1.0 for conf_cmrg_pe, 0 for conf_cmrg_NOSNP1KG_pe 
 # Work out a set of bounds to draw the plot on
 range.log10 <- min.log10 : max.log10
 range.unlogged = 10^range.log10
@@ -148,12 +148,12 @@ dat.plot <- ggplot(dat.roc, aes( x= FPR, y = TPR, color = aligner, label=mq)) +
     geom_point(aes(size=Positive+Negative)) +
     scale_color_manual(values=colors, guide=guide_legend(title=NULL, ncol=2)) +
     scale_size_continuous("number", guide=guide_legend(title=NULL, ncol=4)) +
-    scale_x_log10(limits=c(range.unlogged[1],range.unlogged[length(range.unlogged)]), breaks=range.unlogged, oob=squish) +
-    geom_vline(xintercept=1/total.reads) + # vertical line at one wrong read
+    scale_x_log10(limits=c(range.unlogged[1],range.unlogged[length(range.unlogged)]), breaks=waiver(), oob=squish) + #scale_x_log10(limits=c(range.unlogged[1],range.unlogged[length(range.unlogged)]), breaks=range.unlogged, oob=squish)
+    geom_vline(xintercept=1/total.reads) + # vertical line at one wrong read, no v-line for conf_cmrg_pe
     theme_bw() + 
     ggtitle(title) + 
     theme(aspect.ratio=1) +
-    coord_cartesian(ylim=c(0.955,0.995)) # (0.9745,0.996) for highconf_pe, (0.955,0.995) for conf_difficult_pe
+    coord_cartesian(ylim=c(0.45,0.81)) # (0.9745,0.996) for highconf_pe, (0.955,0.995) for conf_difficult_pe, (0.75,0.97) for conf_lowmap_pe, (0.96,0.995) for conf_mhc_pe, (0.4,0.85) for conf_NOSNP1KG_pe, (0.91,0.98) for conf_cmrg_pe, (0.45,0.81) for conf_cmrg_NOSNP1KG_pe
     
 if (title != '') {
     # And a title
