@@ -14,13 +14,10 @@ workflow vgMultiMap {
         Int READS_PER_CHUNK = 20000000                  # Number of reads contained in each mapping chunk (20000000 for wgs)
         File? PATH_LIST_FILE                            # (OPTIONAL) Text file where each line is a path name in the XG index
         File XG_FILE                                    # Path to .xg index file
-        File GCSA_FILE                                  # Path to .gcsa index file
-        File GCSA_LCP_FILE                              # Path to .gcsa.lcp index file
         File GBWT_FILE                                  # Path to .gbwt index file
         File GGBWT_FILE                                 # Path to .gg index file
         File DIST_FILE                                  # Path to .dist index file
         File MIN_FILE                                   # Path to .min index file
-        File SNARLS_FILE                                # Path to .snarls index file
         File REF_FILE                                   # Path to .fa cannonical reference fasta (only grch37/hg19 currently supported)
         File REF_INDEX_FILE                             # Path to .fai index of the REF_FILE fasta reference
         File REF_DICT_FILE                              # Path to .dict file of the REF_FILE fasta reference
@@ -128,7 +125,7 @@ workflow vgMultiMap {
         }
         call runAbraRealigner {
             input:
-                in_sample_name=SAMPLE_NAME_CHILD,
+                in_sample_name=SAMPLE_NAME,
                 in_bam_file=deepvariant_caller_input_files.left,
                 in_bam_index_file=deepvariant_caller_input_files.right,
                 in_target_bed_file=runGATKRealignerTargetCreator.realigner_target_bed,
@@ -249,7 +246,6 @@ task runVGGIRAFFE {
         File in_ref_dict
         String in_vg_container
         String in_sample_name
-        Boolean surject_output
         Int in_map_cores
         Int in_map_disk
         String in_map_mem
@@ -562,7 +558,7 @@ task concatClippedVCFChunks {
     input {
         String in_sample_name
         Array[File] in_clipped_vcf_chunk_files
-        Int in_vgcall_disk
+        Int in_call_disk
         Int in_call_mem
     }
 
