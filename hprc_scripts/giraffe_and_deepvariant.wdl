@@ -1,3 +1,4 @@
+
 version 1.0
 
 ### giraffe_and_deepvariant.wdl ###
@@ -16,6 +17,7 @@ workflow vgMultiMap {
         String? GIRAFFE_OPTIONS                         # (OPTIONAL) extra command line options for Giraffe mapper
         Array[String]+? CONTIGS                         # (OPTIONAL) Desired reference genome contigs, which are all paths in the XG index.
         File? PATH_LIST_FILE                            # (OPTIONAL) Text file where each line is a path name in the XG index, to use instead of CONTIGS. If neither is given, paths are extracted from the XG and subset to chromosome-looking paths.
+        File? REFERENCE_FASTA_FILE                      # (OPTIONAL) Use this refernce instead of extracting paths from the XG. Required if the graph does not contain the entire reference (ex when making GRCh38 calls on a CHM13-based graph)
         File XG_FILE                                    # Path to .xg index file
         File GBWT_FILE                                  # Path to .gbwt index file
         File GGBWT_FILE                                 # Path to .gg index file
@@ -86,17 +88,19 @@ workflow vgMultiMap {
         File written_path_names_file = write_lines(select_first([CONTIGS]))
     }
     File pipeline_path_list_file = select_first([PATH_LIST_FILE, subsetPathNames.output_path_list_file, written_path_names_file])
-    
-    # To make sure that we have a FASTA reference with a contig set that
-    # exactly matches the graph, we generate it ourselves, from the graph.
-    call extractReference {
-        input:
-            in_xg_file=XG_FILE,
-            in_vg_container=VG_CONTAINER,
-            in_extract_disk=MAP_DISK,
-            in_extract_mem=MAP_MEM
+
+    if (!defined(REFERENCE_FASTA_FILE)) {
+        # To make sure that we have a FASTA reference with a contig set that
+        # exactly matches the graph, we generate it ourselves, from the graph.
+        call extractReference {
+            input:
+                in_xg_file=XG_FILE,
+                in_vg_container=VG_CONTAINER,
+                in_extract_disk=MAP_DISK,
+                in_extract_mem=MAP_MEM
+        }
     }
-    File reference_file = extractReference.reference_file
+    File reference_file = select_first([REFERENCE_FASTA_FILE, extractReference.reference_file])
     
     call indexReference {
         input:
@@ -123,22 +127,35 @@ workflow vgMultiMap {
                 in_ggbwt_file=GGBWT_FILE,
                 in_dist_file=DIST_FILE,
                 in_min_file=MIN_FILE,
-                in_ref_dict=reference_dict_file,
+                in_path_list_file=pipeline_path_list_file,
                 in_sample_name=SAMPLE_NAME,
                 in_map_cores=MAP_CORES,
                 in_map_disk=MAP_DISK,
                 in_map_mem=MAP_MEM
         }
+        # use samtools to replace the header contigs with those from our dict.
+        # this is allows the header to contain contigs that are not in the graph,
+        # which is more general and lets CHM13-based graphs be used to call on GRCh38
+        # also, strip out contig prefixes in the BAM body
+        call fixBAMContigNaming {
+            input:
+                in_bam_file=runVGGIRAFFE.chunk_bam_file,
+                in_ref_dict=reference_dict_file,
+                in_prefix_to_strip="GRCh38.",
+                in_map_cores=MAP_CORES,
+                in_map_disk=MAP_DISK,
+                in_map_mem=MAP_MEM,
+        }
         call sortBAMFile {
             input:
                 in_sample_name=SAMPLE_NAME,
-                in_bam_chunk_file=runVGGIRAFFE.chunk_bam_file,
+                in_bam_chunk_file=fixBAMContigNaming.fixed_bam_file,
                 in_map_cores=MAP_CORES,
                 in_map_disk=MAP_DISK,
                 in_map_mem=MAP_MEM,
         }
     }
-    Array[File] alignment_chunk_bam_files = select_all(sortBAMFile.sorted_chunk_bam)
+    Array[File] alignment_chunk_bam_files = sortBAMFile.sorted_chunk_bam
 
     call mergeAlignmentBAMChunks {
         input:
@@ -148,7 +165,7 @@ workflow vgMultiMap {
             in_map_disk=MAP_DISK,
             in_map_mem=MAP_MEM
     }
-    
+
     # Split merged alignment by contigs list
     call splitBAMbyPath { 
         input:
@@ -372,7 +389,8 @@ task extractReference {
 
         vg paths \
             --extract-fasta \
-            --xg ${in_xg_file} > ref.fa
+            --xg ${in_xg_file} \
+            --paths-by GRCh38 > ref.fa
     }
     output {
         File reference_file = "ref.fa"
@@ -423,7 +441,7 @@ task runVGGIRAFFE {
         File in_ggbwt_file
         File in_dist_file
         File in_min_file
-        File in_ref_dict
+        File in_path_list_file
         String in_vg_container
         String? in_giraffe_options
         String in_sample_name
@@ -447,11 +465,11 @@ task runVGGIRAFFE {
         READ_CHUNK_ID=($(ls ~{in_left_read_pair_chunk_file} | awk -F'.' '{print $(NF-2)}'))
         vg giraffe \
           --progress \
-          --read-group "ID:1 LB:lib1 SM:~{in_sample_name} PL:illumina PU:unit1" \
+          --read-group "ID:i:1 LB:Z:lib1 SM:Z:~{in_sample_name} PL:Z:illumina PU:Z:unit1" \
           --sample "~{in_sample_name}" \
           --output-format BAM \
           ~{in_giraffe_options} \
-          --ref-paths ~{in_ref_dict} \
+          --ref-paths ~{in_path_list_file} \
           -f ~{in_left_read_pair_chunk_file} -f ~{in_right_read_pair_chunk_file} \
           -x ~{in_xg_file} \
           -H ~{in_gbwt_file} \
@@ -499,6 +517,50 @@ task sortBAMFile {
     >>>
     output {
         File sorted_chunk_bam = "~{in_sample_name}.positionsorted.bam"
+    }
+    runtime {
+        time: 90
+        memory: in_map_mem + " GB"
+        cpu: in_map_cores
+        disks: "local-disk " + in_map_disk + " SSD"
+        docker: "quay.io/cmarkello/samtools_picard@sha256:e484603c61e1753c349410f0901a7ba43a2e5eb1c6ce9a240b7f737bba661eb4"
+    }
+}
+
+task fixBAMContigNaming {
+    input {
+        File in_bam_file
+        File in_ref_dict
+        String in_prefix_to_strip
+        Int in_map_cores
+        Int in_map_disk
+        String in_map_mem
+    }
+
+    command <<<
+        # Set the exit code of a pipeline to that of the rightmost command
+        # to exit with a non-zero status, or zero if all commands of the pipeline exit
+        set -o pipefail
+        # cause a bash script to exit immediately when a command fails
+        `set -e
+        # cause the bash shell to treat unset variables as an error and exit immediately
+        set -u
+        # echo each line of the script to stdout so we can see what is happening
+        set -o xtrace
+        #to turn off echo do 'set +o xtrace'
+
+        # patch the SQ fields from the dict into a new header
+        samtools view -H ~{in_bam_file} | grep ^@HD > new_header.sam
+        grep ^@SQ ~{in_ref_dict} | awk '{print $1 "\t" $2 "\t" $3}' >> new_header.sam
+        samtools view -H ~{in_bam_file}  | grep -v ^@HD | grep -v ^@SQ >> new_header.sam
+
+        # insert the new header, and strip all instances of the prefix
+        samtools reheader -P new_header.sam  ~{in_bam_file} | \
+          sed -e 's/${in_prefix_to_strip}//g' | \
+          samtools view --threads ${in_map_cores} -O BAM > fixed.bam   
+    >>>
+    output {
+        File fixed_bam_file = "fixed.bam"
     }
     runtime {
         time: 90
