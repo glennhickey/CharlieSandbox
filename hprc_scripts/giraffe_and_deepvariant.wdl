@@ -556,6 +556,7 @@ task fixBAMContigNaming {
 
         # insert the new header, and strip all instances of the prefix
         samtools reheader -P new_header.sam  ~{in_bam_file} | \
+          samtools view -h | \
           sed -e 's/${in_prefix_to_strip}//g' | \
           samtools view --threads ${in_map_cores} -O BAM > fixed.bam   
     >>>
