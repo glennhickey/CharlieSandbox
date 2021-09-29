@@ -85,7 +85,11 @@ workflow vgMultiMap {
         # Put the paths in a file to use later. We know the value is defined,
         # but WDL is a bit low on unboxing calls for optionals so we use
         # select_first.
-        File written_path_names_file = write_lines(select_first([CONTIGS]))
+        call writeLines {
+            input:
+                in_array=CONTIGS
+          }
+        File written_path_names_file = writeLines.output_file
     }
     File pipeline_path_list_file = select_first([PATH_LIST_FILE, subsetPathNames.output_path_list_file, written_path_names_file])
 
@@ -293,6 +297,18 @@ workflow vgMultiMap {
 ########################
 ### TASK DEFINITIONS ###
 ########################
+
+task writeLines {
+    input {
+        Array[String]+? in_array
+    }
+    command <<<
+        ln -s ${write_lines(in_array)} out_file
+    >>>
+    output {
+       File output_file = "out_file"
+    }
+}
 
 task splitReads {
     input {
