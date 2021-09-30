@@ -32,12 +32,12 @@ workflow vgMultiMap {
         Int MIN_MAPQ = 1                                # Minimum MAPQ of reads to use for calling. 4 is the lowest at which a mapping is more likely to be right than wrong.
         Int REALIGNMENT_EXPANSION_BASES = 160           # Number of bases to expand indel realignment targets by on either side, to free up read tails in slippery regions.
         Int SPLIT_READ_CORES = 8
-        Int SPLIT_READ_DISK = 10
+        Int SPLIT_READ_DISK = 300
         Int MAP_CORES = 16
-        Int MAP_DISK = 10
+        Int MAP_DISK = 300
         Int MAP_MEM = 50
         Int CALL_CORES = 8
-        Int CALL_DISK = 40
+        Int CALL_DISK = 300
         Int CALL_MEM = 50
     }
 

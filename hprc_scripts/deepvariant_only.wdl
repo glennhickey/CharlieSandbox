@@ -24,10 +24,10 @@ workflow deepvariant {
         Int SPLIT_READ_CORES = 8
         Int SPLIT_READ_DISK = 10
         Int MAP_CORES = 16
-        Int MAP_DISK = 10
+        Int MAP_DISK = 300
         Int MAP_MEM = 50
         Int CALL_CORES = 8
-        Int CALL_DISK = 40
+        Int CALL_DISK = 300
         Int CALL_MEM = 50
     }
 
