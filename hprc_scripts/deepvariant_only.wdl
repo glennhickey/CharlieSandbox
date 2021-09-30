@@ -11,6 +11,7 @@ workflow deepvariant {
         String SAMPLE_NAME                              # The sample name
         Array[String] CONTIGS                           # (OPTIONAL) Desired reference genome contigs, which are all paths in the XG index.
         File REFERENCE_FASTA_FILE                       # (OPTIONAL) Use this refernce instead of extracting paths from the XG. Required if the graph does not contain the entire reference (ex when making GRCh38 calls on a CHM13-based graph)
+        File PATH_LIST_FILE                            # (OPTIONAL) Text file where each line is a path name in the XG index. If not  given, paths are extracted from the XG and subset to chromosome-looking paths.
         File BAM_FILE
         File BAM_INDEX_FILE
         File? TRUTH_VCF                                 # Path to .vcf.gz to compare against
@@ -48,11 +49,12 @@ workflow deepvariant {
             in_sample_name=SAMPLE_NAME,
             in_merged_bam_file=BAM_FILE,
             in_merged_bam_file_index=BAM_INDEX_FILE,
-            in_path_list=CONTIGS,
+            in_path_list_file=PATH_LIST_FILE,
             in_map_cores=MAP_CORES,
             in_map_disk=MAP_DISK,
             in_map_mem=MAP_MEM
     }
+ 
     scatter (deepvariant_caller_input_files in zip(splitBAMbyPath.bam_contig_files, splitBAMbyPath.bam_contig_files_index)) {
         
         call runGATKRealignerTargetCreator {
@@ -205,7 +207,7 @@ task splitBAMbyPath {
         String in_sample_name
         File in_merged_bam_file
         File in_merged_bam_file_index
-        Array[String] in_path_list
+        File in_path_list_file
         Int in_map_cores
         Int in_map_disk
         String in_map_mem
@@ -225,7 +227,7 @@ task splitBAMbyPath {
               -o ~{in_sample_name}.${contig}.bam \
             && samtools index \
               ~{in_sample_name}.${contig}.bam
-        done < "${write_lines(in_path_list)}"
+        done < "~{in_path_list_file}"
     >>>
     output {
         Array[File] bam_contig_files = glob("~{in_sample_name}.*.bam")

@@ -15,8 +15,7 @@ workflow vgMultiMap {
         String VG_CONTAINER = "quay.io/vgteam/vg:ci-3272-f6ec6f200ef9467ec1b62104a852acb187d4d3d8"
         Int READS_PER_CHUNK = 20000000                  # Number of reads contained in each mapping chunk (20000000 for wgs)
         String? GIRAFFE_OPTIONS                         # (OPTIONAL) extra command line options for Giraffe mapper
-        Array[String]+? CONTIGS                         # (OPTIONAL) Desired reference genome contigs, which are all paths in the XG index.
-        File? PATH_LIST_FILE                            # (OPTIONAL) Text file where each line is a path name in the XG index, to use instead of CONTIGS. If neither is given, paths are extracted from the XG and subset to chromosome-looking paths.
+        File? PATH_LIST_FILE                            # (OPTIONAL) Text file where each line is a path name in the XG index. If not  given, paths are extracted from the XG and subset to chromosome-looking paths.
         File? REFERENCE_FASTA_FILE                      # (OPTIONAL) Use this refernce instead of extracting paths from the XG. Required if the graph does not contain the entire reference (ex when making GRCh38 calls on a CHM13-based graph)
         File XG_FILE                                    # Path to .xg index file
         File GBWT_FILE                                  # Path to .gbwt index file
@@ -60,38 +59,26 @@ workflow vgMultiMap {
             in_split_read_cores=SPLIT_READ_CORES,
             in_split_read_disk=SPLIT_READ_DISK
     }
-
-    if (!defined(CONTIGS)) {
-        if (!defined(PATH_LIST_FILE)) {
-            # Extract path names to call against from xg file if PATH_LIST_FILE input not provided
-            call extractPathNames {
-                input:
-                    in_xg_file=XG_FILE,
-                    in_vg_container=VG_CONTAINER,
-                    in_extract_disk=MAP_DISK,
-                    in_extract_mem=MAP_MEM
-            }
-            # Filter down to major paths, because GRCh38 includes thousands of
-            # decoys and unplaced/unlocalized contigs, and we can't efficiently
-            # scatter across them, nor do we care about accuracy on them, and also
-            # calling on the decoys is semantically meaningless.
-            call subsetPathNames {
-                input:
-                    in_path_list_file=extractPathNames.output_path_list_file
-            }
+ 
+    if (!defined(PATH_LIST_FILE)) {
+        # Extract path names to call against from xg file if PATH_LIST_FILE input not provided
+        call extractPathNames {
+            input:
+                in_xg_file=XG_FILE,
+                in_vg_container=VG_CONTAINER,
+                in_extract_disk=MAP_DISK,
+                in_extract_mem=MAP_MEM
+        }
+        # Filter down to major paths, because GRCh38 includes thousands of
+        # decoys and unplaced/unlocalized contigs, and we can't efficiently
+        # scatter across them, nor do we care about accuracy on them, and also
+        # calling on the decoys is semantically meaningless.
+        call subsetPathNames {
+            input:
+                in_path_list_file=extractPathNames.output_path_list_file
         }
     } 
-    if (defined(CONTIGS)) {
-        # Put the paths in a file to use later. We know the value is defined,
-        # but WDL is a bit low on unboxing calls for optionals so we use
-        # select_first.
-        call writeLines {
-            input:
-                in_array=CONTIGS
-          }
-        File written_path_names_file = writeLines.output_file
-    }
-    File pipeline_path_list_file = select_first([PATH_LIST_FILE, subsetPathNames.output_path_list_file, written_path_names_file])
+    File pipeline_path_list_file = select_first([PATH_LIST_FILE, subsetPathNames.output_path_list_file])
 
     if (!defined(REFERENCE_FASTA_FILE)) {
         # To make sure that we have a FASTA reference with a contig set that
