@@ -16,7 +16,7 @@ workflow vgMultiMap {
         Int READS_PER_CHUNK = 20000000                  # Number of reads contained in each mapping chunk (20000000 for wgs)
         String? GIRAFFE_OPTIONS                         # (OPTIONAL) extra command line options for Giraffe mapper
         File? PATH_LIST_FILE                            # (OPTIONAL) Text file where each line is a path name in the XG index. If not  given, paths are extracted from the XG and subset to chromosome-looking paths.
-        File? REFERENCE_FASTA_FILE                      # (OPTIONAL) Use this refernce instead of extracting paths from the XG. Required if the graph does not contain the entire reference (ex when making GRCh38 calls on a CHM13-based graph)
+        File? REFERENCE_FASTA_FILE                      # (OPTIONAL) Use this reference instead of extracting paths from the XG. Required if the graph does not contain the entire reference (ex when making GRCh38 calls on a CHM13-based graph).  Must be uncompressed
         File XG_FILE                                    # Path to .xg index file
         File GBWT_FILE                                  # Path to .gbwt index file
         File GGBWT_FILE                                 # Path to .gg index file
@@ -545,7 +545,7 @@ task fixBAMContigNaming {
         # to exit with a non-zero status, or zero if all commands of the pipeline exit
         set -o pipefail
         # cause a bash script to exit immediately when a command fails
-        `set -e
+        set -e
         # cause the bash shell to treat unset variables as an error and exit immediately
         set -u
         # echo each line of the script to stdout so we can see what is happening
@@ -561,7 +561,7 @@ task fixBAMContigNaming {
         samtools reheader -P new_header.sam  ~{in_bam_file} | \
           samtools view -h | \
           sed -e 's/${in_prefix_to_strip}//g' | \
-          samtools view --threads ${in_map_cores} -O BAM > fixed.bam   
+          samtools view --threads ~{in_map_cores} -O BAM > fixed.bam   
     >>>
     output {
         File fixed_bam_file = "fixed.bam"

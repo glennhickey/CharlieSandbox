@@ -9,11 +9,9 @@ version 1.0
 workflow deepvariant {
     input {
         String SAMPLE_NAME                              # The sample name
-        Array[String] CONTIGS                           # (OPTIONAL) Desired reference genome contigs, which are all paths in the XG index.
-        File REFERENCE_FASTA_FILE                       # (OPTIONAL) Use this refernce instead of extracting paths from the XG. Required if the graph does not contain the entire reference (ex when making GRCh38 calls on a CHM13-based graph)
-        File PATH_LIST_FILE                            # (OPTIONAL) Text file where each line is a path name in the XG index. If not  given, paths are extracted from the XG and subset to chromosome-looking paths.
+        File REFERENCE_FASTA_FILE                       # Fasta reference.  Must be uncompressed.
+        File PATH_LIST_FILE                             # Text file where each line is a path name in the XG index. If not  given, paths are extracted from the XG and subset to chromosome-looking paths.
         File BAM_FILE
-        File BAM_INDEX_FILE
         File? TRUTH_VCF                                 # Path to .vcf.gz to compare against
         File? TRUTH_VCF_INDEX                           # Path to Tabix index for TRUTH_VCF
         File? EVALUATION_REGIONS_BED                    # BED to restrict comparison against TRUTH_VCF to
@@ -43,18 +41,40 @@ workflow deepvariant {
     File reference_index_file = indexReference.reference_index_file
     File reference_dict_file = indexReference.reference_dict_file
 
+    # use samtools to replace the header contigs with those from our dict.
+    # this is allows the header to contain contigs that are not in the graph,
+    # which is more general and lets CHM13-based graphs be used to call on GRCh38
+    # also, strip out contig prefixes in the BAM body
+    call fixBAMContigNaming {
+        input:
+            in_bam_file=BAM_FILE,
+            in_ref_dict=reference_dict_file,
+            in_prefix_to_strip="GRCh38.",
+            in_map_cores=MAP_CORES,
+            in_map_disk=MAP_DISK,
+            in_map_mem=MAP_MEM,
+    }
+
+    call indexBAM {
+        input:
+            in_bam_file=fixBAMContigNaming.fixed_bam_file,
+            in_map_cores=MAP_CORES,
+            in_map_disk=MAP_DISK,
+            in_map_mem=MAP_MEM
+    }
+
     # Split merged alignment by contigs list
     call splitBAMbyPath { 
         input:
             in_sample_name=SAMPLE_NAME,
-            in_merged_bam_file=BAM_FILE,
-            in_merged_bam_file_index=BAM_INDEX_FILE,
+            in_merged_bam_file=fixBAMContigNaming.fixed_bam_file,
+            in_merged_bam_file_index=indexBAM.bam_index_file,
             in_path_list_file=PATH_LIST_FILE,
             in_map_cores=MAP_CORES,
             in_map_disk=MAP_DISK,
             in_map_mem=MAP_MEM
     }
- 
+
     scatter (deepvariant_caller_input_files in zip(splitBAMbyPath.bam_contig_files, splitBAMbyPath.bam_contig_files_index)) {
         
         call runGATKRealignerTargetCreator {
@@ -199,6 +219,73 @@ task indexReference {
         memory: in_index_mem + " GB"
         disks: "local-disk " + in_index_disk + " SSD"
         docker: "quay.io/cmarkello/samtools_picard@sha256:e484603c61e1753c349410f0901a7ba43a2e5eb1c6ce9a240b7f737bba661eb4"
+    }
+}
+
+task fixBAMContigNaming {
+    input {
+        File in_bam_file
+        File in_ref_dict
+        String in_prefix_to_strip
+        Int in_map_cores
+        Int in_map_disk
+        String in_map_mem
+    }
+
+    command <<<
+        # Set the exit code of a pipeline to that of the rightmost command
+        # to exit with a non-zero status, or zero if all commands of the pipeline exit
+        set -o pipefail
+        # cause a bash script to exit immediately when a command fails
+        set -e
+        # cause the bash shell to treat unset variables as an error and exit immediately
+        set -u
+        # echo each line of the script to stdout so we can see what is happening
+        set -o xtrace
+        #to turn off echo do 'set +o xtrace'
+
+        # patch the SQ fields from the dict into a new header
+        samtools view -H ~{in_bam_file} | grep ^@HD > new_header.sam
+        grep ^@SQ ~{in_ref_dict} | awk '{print $1 "\t" $2 "\t" $3}' >> new_header.sam
+        samtools view -H ~{in_bam_file}  | grep -v ^@HD | grep -v ^@SQ >> new_header.sam
+
+        # insert the new header, and strip all instances of the prefix
+        samtools reheader -P new_header.sam  ~{in_bam_file} | \
+          samtools view -h | \
+          sed -e 's/${in_prefix_to_strip}//g' | \
+          samtools view --threads ~{in_map_cores} -O BAM > fixed.bam   
+    >>>
+    output {
+        File fixed_bam_file = "fixed.bam"
+    }
+    runtime {
+        time: 90
+        memory: in_map_mem + " GB"
+        cpu: in_map_cores
+        disks: "local-disk " + in_map_disk + " SSD"
+        docker: "quay.io/cmarkello/samtools_picard@sha256:e484603c61e1753c349410f0901a7ba43a2e5eb1c6ce9a240b7f737bba661eb4"
+    }
+}
+
+task indexBAM {
+    input {
+         File in_bam_file
+         Int in_map_cores
+         Int in_map_disk
+         String in_map_mem
+     }
+     command <<<
+         ln -s ~{in_bam_file} input_bam_file.bam
+         samtools index input_bam_file.bam
+     >>>
+     output {
+          File bam_index_file = "input_bam_file.bam.bai"
+    }
+    runtime {
+        memory: in_map_mem + " GB"
+        cpu: in_map_cores
+        disks: "local-disk " + in_map_disk + " SSD"
+        docker: "biocontainers/samtools@sha256:3ff48932a8c38322b0a33635957bc6372727014357b4224d420726da100f5470"
     }
 }
 
