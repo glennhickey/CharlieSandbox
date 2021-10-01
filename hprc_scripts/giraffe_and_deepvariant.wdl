@@ -225,15 +225,6 @@ workflow vgMultiMap {
             in_call_disk=CALL_DISK,
             in_call_mem=CALL_MEM
     }
-    # Extract either the normal or structural variant based VCFs and compress them
-    call bgzipMergedVCF {
-        input:
-            in_sample_name=SAMPLE_NAME,
-            in_merged_vcf_file=concatClippedVCFChunks.output_merged_vcf,
-            in_vg_container=VG_CONTAINER,
-            in_call_disk=CALL_DISK,
-            in_call_mem=CALL_MEM
-    }
     
     if (defined(TRUTH_VCF) && defined(TRUTH_VCF_INDEX)) {
     
@@ -246,8 +237,8 @@ workflow vgMultiMap {
         # Direct vcfeval comparison makes an archive with FP and FN VCFs
         call compareCalls {
             input:
-                in_sample_vcf_file=bgzipMergedVCF.output_merged_vcf,
-                in_sample_vcf_index_file=bgzipMergedVCF.output_merged_vcf_index,
+                in_sample_vcf_file=concatClippedVCFChunks.output_merged_vcf,
+                in_sample_vcf_index_file=concatClippedVCFChunks.output_merged_vcf_index,
                 in_truth_vcf_file=select_first([TRUTH_VCF]),
                 in_truth_vcf_index_file=select_first([TRUTH_VCF_INDEX]),
                 in_template_archive=buildReferenceTemplate.output_template_archive,
@@ -259,8 +250,8 @@ workflow vgMultiMap {
         # Hap.py comparison makes accuracy results stratified by SNPs and indels
         call compareCallsHappy {
             input:
-                in_sample_vcf_file=bgzipMergedVCF.output_merged_vcf,
-                in_sample_vcf_index_file=bgzipMergedVCF.output_merged_vcf_index,
+                in_sample_vcf_file=concatClippedVCFChunks.output_merged_vcf,
+                in_sample_vcf_index_file=concatClippedVCFChunks.output_merged_vcf_index,
                 in_truth_vcf_file=select_first([TRUTH_VCF]),
                 in_truth_vcf_index_file=select_first([TRUTH_VCF_INDEX]),
                 in_reference_file=reference_file,
@@ -274,8 +265,8 @@ workflow vgMultiMap {
     output {
         File? output_vcfeval_evaluation_archive = compareCalls.output_evaluation_archive
         File? output_happy_evaluation_archive = compareCallsHappy.output_evaluation_archive
-        File output_vcf = bgzipMergedVCF.output_merged_vcf
-        File output_vcf_index = bgzipMergedVCF.output_merged_vcf_index
+        File output_vcf = concatClippedVCFChunks.output_merged_vcf
+        File output_vcf_index = concatClippedVCFChunks.output_merged_vcf_index
         Array[File] output_indelrealigned_bams = runAbraRealigner.indel_realigned_bam
         Array[File] output_indelrealigned_bam_indexes = runAbraRealigner.indel_realigned_bam_index
     }   
@@ -560,7 +551,7 @@ task fixBAMContigNaming {
         # insert the new header, and strip all instances of the prefix
         samtools reheader -P new_header.sam  ~{in_bam_file} | \
           samtools view -h | \
-          sed -e 's/${in_prefix_to_strip}//g' | \
+          sed -e "s/~{in_prefix_to_strip}//g" | \
           samtools view --threads ~{in_map_cores} -O BAM > fixed.bam   
     >>>
     output {
@@ -838,7 +829,7 @@ task runDeepVariant {
         ln -f -s ~{in_reference_file} reference.fa
         ln -f -s ~{in_reference_index_file} reference.fa.fai
         
-        MODEL_ARGS=()
+        MODEL_ARGS=("")
         if [[ ! -z "~{in_model_meta_file}" ]] ; then
             # Model files must be adjacent and not at arbitrary paths
             ln -f -s "~{in_model_meta_file}" model.meta
@@ -899,54 +890,18 @@ task concatClippedVCFChunks {
         for vcf_file in ${sep=" " in_clipped_vcf_chunk_files} ; do
             bcftools index "$vcf_file"
         done
-        bcftools concat -a ${sep=" " in_clipped_vcf_chunk_files} | bcftools sort - > ${in_sample_name}_merged.vcf
+        bcftools concat -a ${sep=" " in_clipped_vcf_chunk_files} | bcftools sort - -O z > ${in_sample_name}_merged.vcf.gz
+		  bcftools index -t ${in_sample_name}_merged.vcf.gz
     }
     output {
-        File output_merged_vcf = "${in_sample_name}_merged.vcf"
+        File output_merged_vcf = "${in_sample_name}_merged.vcf.gz"
+		  File output_merged_tbi = "${in_sample_name}_merged.vcf.gz.tbi"
     }
     runtime {
         time: 60
         memory: in_call_mem + " GB"
         disks: "local-disk " + in_call_disk + " SSD"
         docker: "quay.io/biocontainers/bcftools@sha256:95c212df20552fc74670d8f16d20099d9e76245eda6a1a6cfff4bd39e57be01b"
-    }
-}
-
-task bgzipMergedVCF {
-    input {
-        String in_sample_name
-        File in_merged_vcf_file
-        String in_vg_container
-        Int in_call_disk
-        Int in_call_mem
-    }
-
-    # TODO:
-    #   If GVCF in in_merged_vcf_file then output_vcf_extension="gvcf" else output_vcf_extension="vcf"
-    command {
-        # Set the exit code of a pipeline to that of the rightmost command
-        # to exit with a non-zero status, or zero if all commands of the pipeline exit
-        set -o pipefail
-        # cause a bash script to exit immediately when a command fails
-        set -e
-        # cause the bash shell to treat unset variables as an error and exit immediately
-        set -u
-        # echo each line of the script to stdout so we can see what is happening
-        set -o xtrace
-        #to turn off echo do 'set +o xtrace'
-
-        bgzip -c ${in_merged_vcf_file} > ${in_sample_name}_merged.vcf.gz && \
-        tabix -f -p vcf ${in_sample_name}_merged.vcf.gz
-    }
-    output {
-        File output_merged_vcf = "${in_sample_name}_merged.vcf.gz"
-        File output_merged_vcf_index = "${in_sample_name}_merged.vcf.gz.tbi"
-    }
-    runtime {
-        time: 30
-        memory: in_call_mem + " GB"
-        disks: "local-disk " + in_call_disk + " SSD"
-        docker: in_vg_container
     }
 }
 
