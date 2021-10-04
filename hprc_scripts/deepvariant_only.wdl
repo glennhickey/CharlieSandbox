@@ -49,7 +49,7 @@ workflow deepvariant {
         input:
             in_bam_file=BAM_FILE,
             in_ref_dict=reference_dict_file,
-            in_prefix_to_strip="GRCh38.",
+            in_prefix_to_strip="___NULL___",
             in_map_cores=MAP_CORES,
             in_map_disk=MAP_DISK,
             in_map_mem=MAP_MEM,
