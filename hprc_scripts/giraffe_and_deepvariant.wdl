@@ -841,14 +841,16 @@ task runDeepVariant {
         # the runner gives.
         ln -f -s ~{in_reference_file} reference.fa
         ln -f -s ~{in_reference_index_file} reference.fa.fai
-        
+
+        # We should use an array here, but that doesn't seem to work the way I
+        # usually do them (because of a set -u maybe?)
         MODEL_ARGS=("")
         if [[ ! -z "~{in_model_meta_file}" ]] ; then
             # Model files must be adjacent and not at arbitrary paths
             ln -f -s "~{in_model_meta_file}" model.meta
             ln -f -s "~{in_model_index_file}" model.index
             ln -f -s "~{in_model_data_file}" model.data-00000-of-00001
-            MODEL_ARGS=("--customized_model" "model")
+            MODEL_ARGS="--customized_model model"
         fi
 
         # When making examples, throw out any reads that are more likely to be
@@ -862,7 +864,7 @@ task runDeepVariant {
         --output_vcf="~{in_sample_name}_deepvariant.vcf.gz" \
         --output_gvcf="~{in_sample_name}_deepvariant.g.vcf.gz" \
         --intermediate_results_dir=tmp_deepvariant \
-        "${MODEL_ARGS[@]}" \
+        ${MODEL_ARGS} \
         --num_shards=16
     >>>
     output {
