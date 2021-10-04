@@ -317,6 +317,7 @@ task splitReads {
         Array[File] output_read_chunks = glob("fq_chunk_~{in_pair_id}.part.*")
     }
     runtime {
+        preemptible: 1
         time: 120
         cpu: in_split_read_cores
         memory: "2 GB"
@@ -344,6 +345,7 @@ task extractPathNames {
         File output_path_list_file = "path_list.txt"
     }
     runtime {
+        preemptible: 1
         memory: in_extract_mem + " GB"
         disks: "local-disk " + in_extract_disk + " SSD"
         docker: in_vg_container
@@ -364,6 +366,7 @@ task subsetPathNames {
         File output_path_list_file = "path_list.txt"
     }
     runtime {
+        preemptible: 1
         memory: "1 GB"
         disks: "local-disk 10 SSD"
         docker: "ubuntu:20.04"
@@ -390,6 +393,7 @@ task extractReference {
         File reference_file = "ref.fa"
     }
     runtime {
+        preemptible: 1
         memory: in_extract_mem + " GB"
         disks: "local-disk " + in_extract_disk + " SSD"
         docker: in_vg_container
@@ -420,6 +424,7 @@ task indexReference {
         File reference_dict_file = "ref.dict"
     }
     runtime {
+        preemptible: 1
         memory: in_index_mem + " GB"
         disks: "local-disk " + in_index_disk + " SSD"
         docker: "quay.io/cmarkello/samtools_picard@sha256:e484603c61e1753c349410f0901a7ba43a2e5eb1c6ce9a240b7f737bba661eb4"
@@ -476,6 +481,7 @@ task runVGGIRAFFE {
         File chunk_bam_file = glob("*bam")[0]
     }
     runtime {
+        preemptible: 1
         time: 300
         memory: in_map_mem + " GB"
         cpu: in_map_cores
@@ -513,6 +519,7 @@ task sortBAMFile {
         File sorted_chunk_bam = "~{in_sample_name}.positionsorted.bam"
     }
     runtime {
+        preemptible: 1
         time: 90
         memory: in_map_mem + " GB"
         cpu: in_map_cores
@@ -558,6 +565,7 @@ task fixBAMContigNaming {
         File fixed_bam_file = "fixed.bam"
     }
     runtime {
+        preemptible: 1
         time: 90
         memory: in_map_mem + " GB"
         cpu: in_map_cores
@@ -598,6 +606,7 @@ task mergeAlignmentBAMChunks {
         File merged_bam_file_index = "~{in_sample_name}_merged.positionsorted.bam.bai"
     }
     runtime {
+        preemptible: 1
         time: 240
         memory: 5 + " GB"
         cpu: in_map_cores
@@ -638,6 +647,7 @@ task splitBAMbyPath {
         Array[File] bam_contig_files_index = glob("~{in_sample_name}.*.bam.bai")
     }
     runtime {
+        preemptible: 1
         memory: in_map_mem + " GB"
         cpu: in_map_cores
         disks: "local-disk " + in_map_disk + " SSD"
@@ -695,6 +705,7 @@ task runGATKRealignerTargetCreator {
         File realigner_target_bed = glob("*.bed")[0]
     }
     runtime {
+        preemptible: 1
         time: 180
         memory: 20 + " GB"
         cpu: 16
@@ -731,6 +742,7 @@ task widenRealignmentTargets {
         File output_target_bed_file = glob("*.widened.bed")[0]
     }
     runtime {
+        preemptible: 1
         memory: 4 + " GB"
         cpu: 1
         disks: "local-disk " + in_call_disk + " SSD"
@@ -782,6 +794,7 @@ task runAbraRealigner {
         File indel_realigned_bam_index = glob("~{in_sample_name}.*.indel_realigned.bai")[0]
     }
     runtime {
+        preemptible: 1
         time: 180
         memory: 20 + " GB"
         cpu: 16
@@ -857,6 +870,8 @@ task runDeepVariant {
         File output_gvcf_file = "~{in_sample_name}_deepvariant.g.vcf.gz"
     }
     runtime {
+        preemptible: 2
+        bootDiskSizeGb: 20
         memory: in_call_mem + " GB"
         cpu: 8
         gpuType: "nvidia-tesla-t4"
@@ -891,13 +906,14 @@ task concatClippedVCFChunks {
             bcftools index "$vcf_file"
         done
         bcftools concat -a ${sep=" " in_clipped_vcf_chunk_files} | bcftools sort - -O z > ${in_sample_name}_merged.vcf.gz
-		  bcftools index -t ${in_sample_name}_merged.vcf.gz
+        bcftools index -t ${in_sample_name}_merged.vcf.gz
     }
     output {
         File output_merged_vcf = "${in_sample_name}_merged.vcf.gz"
-		  File output_merged_tbi = "${in_sample_name}_merged.vcf.gz.tbi"
+        File output_merged_tbi = "${in_sample_name}_merged.vcf.gz.tbi"
     }
     runtime {
+        preemptible: 1
         time: 60
         memory: in_call_mem + " GB"
         disks: "local-disk " + in_call_disk + " SSD"
@@ -919,6 +935,7 @@ task buildReferenceTemplate {
         File output_template_archive = "template.sdf.tar.gz"
     }
     runtime {
+        preemptible: 1
         docker: "realtimegenomics/rtg-tools:3.12.1"
         memory: 4 + " GB"
         cpu: 1
@@ -963,6 +980,7 @@ task compareCalls {
         File output_evaluation_archive = "vcfeval_results.tar.gz"
     }
     runtime {
+        preemptible: 1
         docker: "realtimegenomics/rtg-tools:3.12.1"
         cpu: 32
         disks: "local-disk " + in_call_disk + " SSD"
@@ -1013,6 +1031,7 @@ task compareCallsHappy {
         File output_evaluation_archive = "happy_results.tar.gz"
     }
     runtime {
+        preemptible: 1
         docker: "jmcdani20/hap.py:v0.3.12"
         cpu: 32
         disks: "local-disk " + in_call_disk + " SSD"
